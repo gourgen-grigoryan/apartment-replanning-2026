@@ -1,0 +1,25 @@
+name: Տեղում չափագրություն կամ նախագծային որոշում
+description: Գրանցել մեկ չչափագրված պայման և դրանից կախված լուծումը։
+title: "[Չափագրություն] "
+body:
+  - type: input
+    id: element
+    attributes:
+      label: Տարր, սենք կամ պահանջի ID
+      description: Օրինակ՝ D-LB անցք, կոյուղու R կանգնակ կամ AR-04։
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Չափման աղբյուր և արդյունք
+      description: Նշել միավոր, նիշ, չափողի անուն, ամսաթիվ և գծագրային հենակետ։
+    validations:
+      required: true
+  - type: textarea
+    id: effect
+    attributes:
+      label: Որոշում ու վերաստուգման չափանիշ
+      description: Նշել՝ տվյալը որ գծագրի կամ համակարգի վրա է ազդում, և ով է հաստատում։
+    validations:
+      required: true
