@@ -1,0 +1,7 @@
+*.pdf binary
+*.dwg binary
+*.xlsx binary
+*.jpg binary
+*.png binary
+*.ifc -text whitespace=cr-at-eol
+00-input/*.txt -text whitespace=cr-at-eol

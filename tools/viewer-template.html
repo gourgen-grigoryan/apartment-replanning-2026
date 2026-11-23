@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="hy">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Բնակարանի եռաչափ մոդել · R2</title>
+<style>
+:root{color-scheme:light;--paper:#f7f5ef;--ink:#213c37;--muted:#596c62;--rule:#d9dfd6;--brand:#20584d}
+*{box-sizing:border-box}body{margin:0;font:14px/1.48 Arial,'Sylfaen',sans-serif;color:var(--ink);background:var(--paper)}
+main{min-height:100dvh;display:grid;grid-template-columns:minmax(0,1fr) 326px;grid-template-rows:auto 1fr}
+header{grid-column:1/-1;background:#173d35;color:#f4f5e9;display:flex;align-items:center;justify-content:space-between;padding:14px 26px;gap:1rem;border-bottom:3px solid #a6b8a4}
+h1{font-size:19px;line-height:1.25;margin:0;font-weight:600}header small{font-size:12px;color:#d7e1d3}
+.stage{position:relative;min-height:520px;overflow:hidden;background:radial-gradient(ellipse at 45% 48%,#fcfaf3,#e5e6d9);isolation:isolate}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#scene{touch-action:none;cursor:grab}#scene:active{cursor:grabbing}#overlay{pointer-events:none}
+.stagefooter{position:absolute;left:20px;right:20px;bottom:13px;display:flex;gap:12px;justify-content:space-between;color:#4a6356;font-size:11px;pointer-events:none}
+.stagefooter span{padding:3px 8px;background:#f8f8efdc;border-radius:3px}
+aside{padding:20px 21px;overflow:auto;max-height:calc(100dvh - 54px);background:#fcfcf7;border-left:1px solid #cbd4cb}
+h2{font-size:13px;margin:0 0 10px;font-weight:700}section{margin:0 0 15px;padding:0 0 15px;border-bottom:1px solid var(--rule)}
+button,select{font:inherit;color:var(--ink);background:white;border:1px solid #bac8bc;border-radius:4px;padding:7px 8px}button{cursor:pointer}
+button:hover,button:focus-visible{background:#e4eee5}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #287f6f;outline-offset:1px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:7px}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.small{color:var(--muted);font-size:12px;margin:7px 0 0}
+input[type=range]{width:100%;accent-color:#36775f}input[type=checkbox]{accent-color:#36775f}
+label.toggle{display:flex;gap:8px;align-items:center;margin:6px 0;cursor:pointer}
+.dot{height:8px;width:8px;border-radius:100%;flex:none}select{max-width:100%;width:100%}
+#detail{margin-top:9px;font-size:12px;color:#435d52;line-height:1.5;min-height:34px}
+.value{font:600 13px Arial;color:#23654d}
+@media(max-width:760px){main{display:block;min-height:0}header{padding:12px 15px}.stage{height:58dvh;min-height:350px}aside{max-height:none;border-left:none;border-top:1px solid var(--rule);padding:15px}header small{white-space:nowrap}.stagefooter{left:6px;right:6px;font-size:10px}.small{font-size:12px}}
+</style>
+<main>
+<header><h1>Բնակարանի եռաչափ մոդել</h1><small>Մուտք №3 · R2 · 23.11.2026</small></header>
+<div class="stage" id="stage"><canvas id="scene" tabindex="0" aria-label="Պտտվող եռաչափ մոդել"></canvas><canvas id="overlay" aria-hidden="true"></canvas>
+<div class="stagefooter"><span>Քաշել՝ պտտելու համար · Անիվ՝ խոշորացում</span><span id="scale"></span></div></div>
+<aside>
+<section><h2>Տեսանկյուն</h2><div class="pair"><button id="axon">Ընդհանուր տեսք</button><button id="top">Հատակագիծ</button><button id="front">Պատշգամբից</button><button id="entry">Մուտքից</button></div>
+<p class="small">Shift և քաշում՝ տեսքը տեղաշարժելու համար։ Կրկնակի սեղմում՝ սկզբնական տեսք։</p></section>
+<section><div class="row"><h2>Հորիզոնական կտրվածք</h2><output id="height" class="value"></output></div><label><input id="cut" type="range" min="0.10" max="3" step="0.05" value="1.35" aria-label="Կտրվածքի բարձրություն, մ"></label>
+<p class="small">Բարձրությունը հաշվվում է պատրաստի հատակից։ Առաստաղի ընդունված նիշը +2.80 մ է։</p></section>
+<section><h2>Ցուցադրվող շերտեր</h2><div id="layers"></div></section>
+<section><h2>Սենք կամ տարր</h2><select id="inspect" aria-label="Ընտրել սենք կամ տարր"><option value="">Ընտրել տարր</option></select><div id="detail">Սեղմեք գծագրի տարրին՝ չափերը տեսնելու համար։</div></section>
+<p class="small">Նախնական նախագիծ։ Ստորին հարևանի գույքային սահմանը, պատերի կառուցվածքը, բացվածքների նիշերն ու ցանցերի միացման կետերը ենթակա են տեղում ստուգման։</p>
+</aside></main>
+<script type="application/json" id="data">___MODEL_JSON___</script>
+<script>
+'use strict';
+const model=JSON.parse(document.getElementById('data').textContent), a=model.arch, m=model.services;
+const $=id=>document.getElementById(id), cv=$('scene'),ov=$('overlay'), ui=ov.getContext('2d');
+const gl=cv.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:false,preserveDrawingBuffer:true});
+const ctx=gl?null:cv.getContext('2d');
+const layers=[
+ ['labels','Մակագրություններ','#305c50',true],['furn','Կահույք և սարքեր','#b99670',true],['guest','Հյուրի ուղի','#ae5638',true],
+ ['water','Տաք և սառը ջուր','#2b80b0',false],['drain','Կոյուղի և անկումներ','#844f27',false],['power','Էլեկտրասնուցում','#a96b00',false],['light','Լուսատուներ և անջատիչներ','#ac830f',false],['hvac','Օդափոխություն և կլիմա','#428271',false]
+];
+const state=Object.fromEntries(layers.map(d=>[d[0],d[3]])), groups={CW:'water',HW:'water',DWV:'drain',DROP:'drain',FLEX:'drain',ACCESS:'drain',CABLE:'power',POWER:'power',SWITCH:'light',LIGHT:'light',REF:'hvac',SUP:'hvac',EXH:'hvac',COND:'hvac',HVAC:'hvac',HEAT:'hvac',TRANSFER:'hvac'};
+const systems={CW:'#196fa8',HW:'#c14943',DWV:'#724021',DROP:'#924e20',FLEX:'#a76a24',ACCESS:'#c09555',LIGHT:'#cb930c',SWITCH:'#b18622',CABLE:'#925a19',POWER:'#9e6620',REF:'#883778',SUP:'#27705f',EXH:'#b26935',COND:'#2e92a3',HVAC:'#4f8677',HEAT:'#b93e3c',TRANSFER:'#5b8848'};
+const labelNames={bed:'Մահճակալ',sofa:'Բազմոց',table:'Սեղան',bench:'Նստարան',chair:'Աթոռ',sink:'Խոհանոցի լվացարան',dishwasher:'Սպասք լվացող մեքենա',hob:'Սալօջախ',fridge:'Սառնարան',shower:'Ցնցուղ',toilet:'Զուգարանակոնք',basin:'Լվացարան',washer:'Լվացքի մեքենա'};
+const roomColors={ST:'#d4b791',B1:'#d2b893',B2:'#d2b893',BA:'#a3b9ad',H1:'#c4aa89',H2:'#d3b99b',ST2:'#d4b791',BAL:'#c1c4af',SH:'#babcb0',SR:'#b9b7a5'};
+const centers={ST:[4.10,.47],B1:[1.45,2.97],B2:[7.38,3.04],BA:[5.97,-3.55],H1:[6.34,-1.41],H2:[6.97,.42],ST2:[2.41,-3.4],BAL:[4.30,6.68],SH:[7.98,-3.54],SR:[10.28,-2.1]};
+const cats={}, parts=[],traces=[], ids=new Map();
+const ns='մ',fmt=(v,k=2)=>Number(v).toFixed(k),len=(p,q)=>Math.hypot(q[0]-p[0],q[1]-p[1]);
+const mid=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
+function record(key,name,info,group){ids.set(key,{name,info,group});(cats[group]??=[]).push(key)}
+function polygon(id,p,z,h,color,layer='arch',alpha=1){
+ if(h<=z)return;parts.push({id,p,z,h,color,layer,alpha});
+}
+function rect(x,y,w,d){return [[x,y],[x+w,y],[x+w,y+d],[x,y+d]]}
+function box(id,x,y,z,w,d,h,c,layer='furn',alpha=1){polygon(id,rect(x,y,w,d),z,z+h,c,layer,alpha)}
+function slab(id,p,q,t,z,h,c,layer='arch',alpha=1){
+ const d=len(p,q);if(d<.0001)return;const nx=-(q[1]-p[1])*t/(2*d),ny=(q[0]-p[0])*t/(2*d);
+ polygon(id,[[p[0]-nx,p[1]-ny],[q[0]-nx,q[1]-ny],[q[0]+nx,q[1]+ny],[p[0]+nx,p[1]+ny]],z,h,c,layer,alpha);
+}
+for(const r of a.rooms){
+ record(r.id,r.name,'Մաքուր մակերես՝ '+fmt(r.area)+' մ²։ '+r.points.length+' գագաթ։','Սենքեր');
+ polygon(r.id,r.points,-.115,0,roomColors[r.id]);}
+function lerp(p,q,t){return p.map((v,i)=>v+(q[i]-v)*t)}
+for(const w of a.walls){
+ const d=len(w.a,w.b),vec=w.b.map((v,i)=>(v-w.a[i])/d);
+ const u=p=>(p[0]-w.a[0])*vec[0]+(p[1]-w.a[1])*vec[1];
+ const pos=t=>lerp(w.a,w.b,t/d);const col=w.kind==='bearing'?'#676e64':w.kind==='new'?'#e3e0cf':'#c9c7b7';
+ record(w.id,w.id==='LB'?'Կրող պատ':(w.kind==='new'?'Նոր միջնորմ':'Առկա պատ'),fmt(d)+' մ երկարություն · '+fmt(w.t,3)+' մ հաստություն։','Պատեր');
+ const dis=a.openings.filter(v=>v.wall===w.id).map(v=>({o:v,l:Math.max(0,Math.min(u(v.a),u(v.b))),r:Math.min(d,Math.max(u(v.a),u(v.b)))})).sort((v,k)=>v.l-k.l);
+ let last=0;for(const s of dis){
+   if(s.l>last)slab(w.id,pos(last),pos(s.l),w.t,0,a.height,col);
+   if(s.o.sill>0)slab(w.id,pos(s.l),pos(s.r),w.t,0,s.o.sill,col);
+   const top=s.o.sill+s.o.height;if(top<a.height)slab(w.id,pos(s.l),pos(s.r),w.t,top,a.height,col);
+   last=Math.max(last,s.r);
+ }
+ if(last<d)slab(w.id,pos(last),pos(d),w.t,0,a.height,col);
+}
+record('C01','Բետոնե սյուն','Հատույթը մոտ 0.21 × 0.19 մ է։ Մոդելային բարձրություն՝ '+fmt(a.height)+' մ։','Պատեր');
+polygon('C01',a.column,0,a.height,'#525a50');
+const openName={entry:'Բնակարանի մուտք №3',door:'Ներքին դուռ',sliding:'Սահող դուռ',passage:'Գործող անցքի նշան',window:'Լուսամուտ',internal_window:'Ներքին բացվածքի նշան',glazed_door:'Ապակեպատ պատշգամբի դուռ',entry_common:'Ընդհանուր մուտք'};
+for(const d of a.openings){
+ const key=d.id,le=len(d.a,d.b),t=d.sill+d.height;record(key,openName[d.kind],fmt(le)+' × '+fmt(d.height)+' մ · գոգ՝ '+fmt(d.sill)+' մ։ '+d.action,'Բացվածքներ');
+ if(d.kind==='passage')continue;
+ for(const p of [d.a,d.b])box(key,p[0]-.018,p[1]-.018,d.sill,.036,.036,d.height,'#665e4d','arch');
+ slab(key,d.a,d.b,.036,t-.035,t,'#665e4d');
+ if(d.kind==='window'||d.kind==='internal_window'){
+  slab(key,d.a,d.b,.025,d.sill+.03,t-.03,'#8cb7b0','glass',.25);slab(key,d.a,d.b,.045,d.sill,d.sill+.035,'#638479');
+ }else if(d.kind==='sliding'){
+  const direction=lerp(d.a,d.b,.5), delta=(d.b[0]-d.a[0])/2;
+  slab(key,[d.a[0]-delta,d.a[1]+.015],d.a,.04,0,2.08,'#b5946c');
+  slab(key,d.b,[d.b[0]+delta,d.b[1]+.015],.04,0,2.08,'#b5946c');
+ }else{
+  const hinge=d[d.hinge], vec=d.swing;
+  const tip=[hinge[0]+le*vec[0],hinge[1]+le*vec[1]];
+  slab(key,hinge,tip,.035,0,d.height-.03,d.kind==='glazed_door'?'#89bcb5':'#b99a72',d.kind==='glazed_door'?'glass':'arch',d.kind==='glazed_door'?.32:1);
+ }
+}
+const bp=a.rooms.find(r=>r.id==='BAL').points;
+record('GL','Արտաքին ապակեպատում','Ընտրված է գործող պատշգամբի սահմանը։ Փեղկերի և պրոֆիլի բաժանումը նախնական է։','Պատեր');
+for(let j=0;j<bp.length;j++){if(j===3)continue;const p=bp[j],q=bp[(j+1)%bp.length],n=Math.ceil(len(p,q)/1.3);
+ slab('GL',p,q,.06,0,.07,'#637b72');slab('GL',p,q,.06,2.59,2.65,'#637b72');slab('GL',p,q,.034,1.00,1.04,'#6b857b');
+ slab('GL',p,q,.017,.07,2.59,'#8dbab6','glass',.16);
+ for(let k=0;k<n;k++){const u=lerp(p,q,k/n);box('GL',u[0]-.027,u[1]-.027,0,.054,.054,2.65,'#668076','arch');}
+}
+const wood='#a88761', ivory='#e9e5d5', white='#dedfd7',sage='#97aa93', dark='#4c5c54';
+for(const f of a.furniture){
+ const {id,x,y,w,d,h,kind}=f;record(id,labelNames[kind]||id,fmt(w)+' × '+fmt(d)+' × '+fmt(h)+' մ · '+[fmt(x),fmt(y)].join(', ')+' մ։','Կահավորում');
+ const b=(X,Y,Z,W,D,H,color)=>box(id,X,Y,Z,W,D,H,color);
+ if(kind==='bed'){
+   b(x,y,.10,w,d,.22,wood);b(x+.025,y+.025,.32,w-.05,d-.05,.16,ivory);b(x+.045,y+.48,.47,w-.09,d-.55,.055,sage);b(x+.08,y+.08,.48,w-.16,.32,.085,'#f3f0df');
+ }else if(kind==='sofa'){
+   b(x,y,.10,w,d,.29,'#6f887b');b(x+.10,y+.09,.39,w-.12,d-.18,.12,'#a8bca5');b(x,y,0.35,.13,d,.45,'#839f90');
+   for(const yy of [y,y+d-.09])b(x,yy,.35,w,.09,.31,'#8da596');
+ }else if(kind==='chair'||kind==='bench'||kind==='table'){
+   const top=kind==='chair'?.46:h,th=.06;b(x,y,top-th,w,d,th,wood);
+   for(const xx of [x+.04,x+w-.085])for(const yy of [y+.04,y+d-.085])b(xx,yy,.025,.045,.045,top-th,'#635e4b');
+   if(kind==='chair')b(x+w-.055,y,top,.055,d,h-top,'#ab8b65');
+ }else if(kind==='shower'){
+   b(x,y,.005,w,d,.075,'#b8cec0');b(x,y,.08,.025,d,h-.08,'#aac5bc');b(x,y,.08,w,.025,h-.08,'#aac5bc');
+ }else if(kind==='toilet'){
+   b(x+w*.1,y+d*.09,0,w*.75,d*.82,.39,white);b(x+w*.69,y,.39,w*.31,d,.37,'#e5e6df');
+ }else{
+   b(x,y,.035,w,d,h-.035,kind==='fridge'||kind==='washer'?'#c8cfc6':wood);
+   if(['sink','basin','hob','dishwasher'].includes(kind)){b(x,y,h-.03,w,d,.03,'#dbdacf');b(x+.07,y+.075,h,w-.14,d-.15,.014,kind==='hob'?dark:kind==='dishwasher'?'#dfded2':'#9ba9a0');}
+ }
+}
+for(const r of m.routes){const g=groups[r.system];if(!g)continue;const key='S-'+r.id;record(key,r.name,r.id+' · '+r.system+' · '+fmt(r.length_plan??r.points.slice(1).reduce((v,p,i)=>v+len(r.points[i],p),0))+' մ։','Ինժեներական գծեր');traces.push({id:key,pts:r.points,layer:g,color:systems[r.system],width:r.system==='DWV'?3:2});}
+for(const e of m.elements){const g=groups[e.system];if(!g)continue;const key='E-'+e.id;const sz=e.size,pt=e.point;
+record(key,e.name,e.id+' · X, Y, Z՝ '+pt.map(z=>fmt(z,3)).join(', ')+' մ։','Ինժեներական կետեր');
+box(key,pt[0]-sz[0]/2,pt[1]-sz[1]/2,pt[2]-sz[2]/2,Math.max(.04,sz[0]),Math.max(.04,sz[1]),Math.max(.04,sz[2]),systems[e.system],g);}
+traces.push({id:'GUEST',pts:a.routes.guest.map(p=>[...p,.045]),layer:'guest',color:'#a64e30',width:3});
+record('GUEST','Հյուրի ուղի','Մուտքից դեպի պատշգամբի դռան առանցքը՝ '+fmt(a.lengths.guest)+' մ։ Երկու ննջարաններն էլ շրջանցվում են։','Շարժում');
+for(const [id,name,c,on] of layers){const lb=document.createElement('label');lb.className='toggle';const it=document.createElement('input');it.type='checkbox';it.checked=on;it.id='layer-'+id;it.onchange=()=>{state[id]=it.checked;draw()};
+ const sw=document.createElement('span');sw.className='dot';sw.style.background=c;lb.append(it,sw,document.createTextNode(name));$('layers').append(lb);}
+for(const [name,keys] of Object.entries(cats)){const group=document.createElement('optgroup');group.label=name;
+ for(const key of keys){const el=document.createElement('option');el.value=key;el.textContent=ids.get(key).name+' · '+key.replace(/^[SE]-/,'');group.append(el);}$('inspect').append(group);}
+</script>
+<script>
+let yaw=-.51,pitch=.88,zoom=1,panX=0,panY=0,cut=1.35,selected='',picked=[],lastWidth=0,lastHeight=0,ratio=1;
+const view={w:0,h:0,s:1}, target=[5.12,1.48,.55], rgbCache=new Map(), triCache=new Map();
+function rgb(code){if(!rgbCache.has(code)){const n=parseInt(code.slice(1),16);rgbCache.set(code,[(n>>16)/255,((n>>8)&255)/255,(n&255)/255])}return rgbCache.get(code)}
+function project(p){
+ const x=p[0]-target[0],y=p[1]-target[1],z=p[2]-target[2],c=Math.cos(yaw),s=Math.sin(yaw),ep=Math.sin(pitch),cp=Math.cos(pitch);
+ return [view.w/2+panX+view.s*(x*c+y*s),view.h/2+panY-view.s*(-x*s*ep+y*c*ep+z*cp),x*s*cp-y*c*cp+z*ep]
+}
+function tri(poly){
+ if(triCache.has(poly))return triCache.get(poly);
+ let ord=poly.map((_,i)=>i);const turn=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+ const signed=poly.reduce((v,p,i)=>v+p[0]*poly[(i+1)%poly.length][1]-poly[(i+1)%poly.length][0]*p[1],0);if(signed<0)ord.reverse();
+ let triangles=[],tries=0;
+ while(ord.length>3&&tries++<poly.length*2){
+   let pass=false;for(let i=0;i<ord.length;i++){
+    const j=ord[(i+ord.length-1)%ord.length],k=ord[i],l=ord[(i+1)%ord.length],pa=poly[j],pb=poly[k],pc=poly[l];
+    if(Math.abs(turn(pa,pb,pc))<1e-10){ord.splice(i,1);pass=true;break}
+    if(turn(pa,pb,pc)<0)continue;
+    if(ord.some(o=>o!==j&&o!==k&&o!==l&&turn(pa,pb,poly[o])>=0&&turn(pb,pc,poly[o])>=0&&turn(pc,pa,poly[o])>=0))continue;
+    triangles.push([j,k,l]);ord.splice(i,1);pass=true;break;
+   }if(!pass)break;
+ }
+ if(ord.length===3)triangles.push(ord.slice());triCache.set(poly,triangles);return triangles;
+}
+let program,buffer,vpos,vcol;
+if(gl){
+ const shader=(t,s)=>{const v=gl.createShader(t);gl.shaderSource(v,s);gl.compileShader(v);if(!gl.getShaderParameter(v,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(v));return v};
+ program=gl.createProgram();
+ gl.attachShader(program,shader(gl.VERTEX_SHADER,'attribute vec3 p;attribute vec4 c;varying vec4 v;void main(){gl_Position=vec4(p,1.0);v=c;}'));
+ gl.attachShader(program,shader(gl.FRAGMENT_SHADER,'precision mediump float;varying vec4 v;void main(){gl_FragColor=v;}'));
+ gl.linkProgram(program);gl.useProgram(program);buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+ vpos=gl.getAttribLocation(program,'p');vcol=gl.getAttribLocation(program,'c');gl.enableVertexAttribArray(vpos);gl.enableVertexAttribArray(vcol);
+ gl.vertexAttribPointer(vpos,3,gl.FLOAT,false,28,0);gl.vertexAttribPointer(vcol,4,gl.FLOAT,false,28,12);
+ gl.clearColor(0,0,0,0);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+}
+function draw(){
+ const bb=$('stage').getBoundingClientRect();view.w=bb.width;view.h=bb.height;ratio=Math.min(2,devicePixelRatio||1);
+ if(Math.abs(view.w-lastWidth)>.25||Math.abs(view.h-lastHeight)>.25){
+  for(const c of [cv,ov]){c.width=Math.max(1,Math.round(view.w*ratio));c.height=Math.max(1,Math.round(view.h*ratio))}
+  lastWidth=view.w;lastHeight=view.h;
+ }
+ view.s=Math.min(view.w/15.3,view.h/14.9)*zoom;
+ ui.setTransform(ratio,0,0,ratio,0,0);ui.clearRect(0,0,view.w,view.h);
+ const opaque=[],glass=[],over=[],filled=[];picked=[];
+ function face(id,points,tris,color,shade,alpha,pass){
+   const pp=points.map(project),dep=pp.reduce((v,p)=>v+p[2],0)/pp.length;
+   const base=id===selected?rgb('#d08730'):rgb(color),tint=base.map(v=>Math.min(1,v*shade));
+   const item={id,pp,tris,dep,tint,alpha};(pass===2?over:alpha<1?glass:opaque).push(item);
+   picked.push(item)
+ }
+ for(const part of parts){
+   const layer=part.layer;if(!['arch','glass'].includes(layer)&&!state[layer])continue;
+   const system=!['arch','glass','furn'].includes(layer),z=part.z,h=system?part.h:Math.min(cut,part.h);
+   if(z>=h)continue;
+   const p=part.p,points=p.map(w=>[...w,h]),pass=system?2:0;
+   face(part.id,points,tri(p),part.color,h<part.h-1e-7&&layer==='arch'?.78:1.015,part.alpha,pass);
+   const ar=p.reduce((s,v,i)=>s+v[0]*p[(i+1)%p.length][1]-p[(i+1)%p.length][0]*v[1],0),winding=ar>=0?1:-1;
+   for(let i=0;i<p.length;i++){
+     const j=(i+1)%p.length,dx=p[j][0]-p[i][0],dy=p[j][1]-p[i][1],ll=Math.hypot(dx,dy);if(ll<1e-7)continue;
+     const nx=dy*winding/ll,ny=-dx*winding/ll;
+     if(nx*Math.sin(yaw)-ny*Math.cos(yaw)<-.0001)continue;
+     const shade=.77+.17*(-.54*nx-.80*ny);
+     face(part.id,[[...p[i],z],[...p[j],z],[...p[j],h],[...p[i],h]],[[0,1,2],[0,2,3]],part.color,shade,part.alpha,pass);
+   }
+ }
+ function gpu(faces){
+   const data=[];for(const f of faces)for(const t of f.tris)for(const i of t){const p=f.pp[i];data.push(p[0]*2/view.w-1,1-p[1]*2/view.h,-p[2]/36,...f.tint,f.alpha);}
+   if(!data.length)return;
+   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.DYNAMIC_DRAW);gl.drawArrays(gl.TRIANGLES,0,data.length/7);
+ }
+ const byDepth=(a,b)=>a.dep-b.dep;
+ if(gl){gl.viewport(0,0,cv.width,cv.height);gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gpu(opaque);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gpu(glass.sort(byDepth));gl.disable(gl.DEPTH_TEST);gpu(over.sort(byDepth));gl.depthMask(true);}
+ else{
+    ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,view.w,view.h);
+    for(const set of [[...opaque,...glass].sort(byDepth),over.sort(byDepth)])for(const f of set){
+      ctx.fillStyle='rgba('+f.tint.map(s=>Math.round(s*255)).join(',')+','+f.alpha+')';ctx.beginPath();for(let i=0;i<f.pp.length;i++){const v=f.pp[i];i?ctx.lineTo(v[0],v[1]):ctx.moveTo(v[0],v[1])}ctx.closePath();ctx.fill();
+    }
+ }
+ function trace(s){
+  const xy=s.pts.map(project);ui.strokeStyle=s.id===selected?'#f19825':s.color;ui.lineWidth=s.width+(s.id===selected?2:0);ui.lineJoin='round';ui.lineCap='round';
+  ui.beginPath();xy.forEach((p,i)=>i?ui.lineTo(p[0],p[1]):ui.moveTo(p[0],p[1]));ui.stroke();
+  if(s.id==='GUEST'){
+   const [u,v]=xy.slice(-2),ang=Math.atan2(v[1]-u[1],v[0]-u[0]);ui.beginPath();ui.moveTo(v[0],v[1]);for(const angle of [-.50,.50])ui.lineTo(v[0]-9*Math.cos(ang+angle),v[1]-9*Math.sin(ang+angle));ui.closePath();ui.fillStyle=s.color;ui.fill();
+  }
+ }
+ for(const s of traces)if(state[s.layer])trace(s);
+ function badge(p,label,focus){
+  const x=p[0],y=p[1];ui.font=(focus?'bold ':'')+'11px Arial';const w=ui.measureText(label).width+10;
+  ui.fillStyle=focus?'rgba(242,210,146,.96)':'rgba(248,249,238,.90)';ui.fillRect(x-w/2,y-9,w,16);
+  ui.textAlign='center';ui.textBaseline='middle';ui.fillStyle='#263f35';ui.fillText(label,x,y-.3);
+ }
+ if(state.labels)for(const r of a.rooms){const p=centers[r.id];if(p&&view.w>430||p&&['ST','B1','B2','BA','BAL'].includes(r.id))badge(project([...p,.045]),r.id==='SR'?'Խորդ.':r.name,r.id===selected);}
+ const bar=Math.min(3,Math.max(1,Math.floor(100/view.s))),bx=23,by=view.h-53;
+ ui.strokeStyle='#3c564c';ui.lineWidth=1.5;ui.beginPath();ui.moveTo(bx,by-3);ui.lineTo(bx,by+2);ui.lineTo(bx+bar*view.s,by+2);ui.lineTo(bx+bar*view.s,by-3);ui.stroke();
+ ui.font='11px Arial';ui.textAlign='center';ui.fillStyle='#365146';ui.fillText(bar+' մ',bx+bar*view.s/2,by-7);
+ $('height').textContent='+'+fmt(cut)+' մ';$('scale').textContent=state.water||state.drain||state.power||state.light||state.hvac?'Ցանցերը՝ թափանցող տեսքով':'Մետր · ±0.000 պատրաստի հատակ';
+ cv.dataset.renderer=gl?'WebGL':'Canvas2D';cv.dataset.faces=String(opaque.length+glass.length+over.length);cv.dataset.systemElements=String(over.length);
+}
+function choose(key){
+ selected=key;const z=ids.get(key);$('inspect').value=key;
+ $('detail').textContent=z?z.name+' · '+key.replace(/^[SE]-/,'')+' — '+z.info:'Սեղմեք գծագրի տարրին՝ չափերը տեսնելու համար։';
+ if(key.startsWith('S-')||key.startsWith('E-')){
+  const ent=key.startsWith('S-')?m.routes.find(r=>'S-'+r.id===key):m.elements.find(r=>'E-'+r.id===key);
+  if(ent){const g=groups[ent.system];state[g]=true;$('layer-'+g).checked=true}
+ }
+ draw()
+}
+function hit(px,py){
+ function inPoly(p){let inside=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>py)!==(b[1]>py)&&px<(b[0]-a[0])*(py-a[1])/(b[1]-a[1])+a[0])inside=!inside;}return inside}
+ let best=null;for(const f of picked)if((!best||f.dep>best.dep)&&inPoly(f.pp))best=f;
+ choose(best?best.id:'');
+}
+function viewpoint(mode){
+ const v={axon:[-.51,.88,1],top:[0,Math.PI/2-.001,1],front:[Math.PI,.45,1.0],entry:[.83,.66,1.06]}[mode];[yaw,pitch,zoom]=v;panX=0;panY=0;draw();
+}
+for(const mode of ['axon','top','front','entry'])$(mode).onclick=()=>viewpoint(mode);
+$('cut').oninput=()=>{cut=+$('cut').value;draw()};$('inspect').onchange=e=>choose(e.target.value);
+let drag=null;cv.onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,px:e.clientX,py:e.clientY,pan:e.shiftKey||e.button===1,far:false};cv.setPointerCapture(e.pointerId);cv.focus()};
+cv.onpointermove=e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+ if(Math.hypot(e.clientX-drag.px,e.clientY-drag.py)>4)drag.far=true;
+ if(drag.pan){panX+=dx;panY+=dy}else{yaw+=dx*.008;pitch=Math.max(.11,Math.min(1.569,pitch+dy*.007));}
+ drag.x=e.clientX;drag.y=e.clientY;draw()};
+cv.onpointerup=e=>{if(!drag)return;const click=!drag.far;drag=null;if(click){const r=cv.getBoundingClientRect();hit(e.clientX-r.left,e.clientY-r.top)}};
+cv.onpointercancel=()=>drag=null;cv.ondblclick=()=>viewpoint('axon');cv.onwheel=e=>{e.preventDefault();zoom=Math.min(4,Math.max(.48,zoom*Math.exp(-e.deltaY*.0015)));draw()};
+cv.onkeydown=e=>{const step=.1;if(e.key==='ArrowLeft')yaw-=step;else if(e.key==='ArrowRight')yaw+=step;else if(e.key==='ArrowUp')pitch=Math.min(1.569,pitch+step);else if(e.key==='ArrowDown')pitch=Math.max(.11,pitch-step);else if(e.key==='+')zoom=Math.min(4,zoom*1.1);else if(e.key==='-')zoom=Math.max(.48,zoom/1.1);else return;e.preventDefault();draw()};
+new ResizeObserver(draw).observe($('stage'));draw();
+</script>
+</html>
