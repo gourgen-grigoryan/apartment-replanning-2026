@@ -1,0 +1,170 @@
+[
+  {
+    "file": "01-studio.jpg",
+    "name": "Հյուրասենյակ և ճաշասրահ",
+    "eye": [
+      3.06,
+      0.42,
+      1.52
+    ],
+    "target": [
+      5.6,
+      3.43,
+      1.1
+    ],
+    "horizontal_fov_deg": 78,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  },
+  {
+    "file": "02-kitchen.jpg",
+    "name": "Բաց խոհանոց",
+    "eye": [
+      5.53,
+      2.04,
+      1.49
+    ],
+    "target": [
+      8.46,
+      1.28,
+      1.18
+    ],
+    "horizontal_fov_deg": 71,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  },
+  {
+    "file": "03-bedroom-1.jpg",
+    "name": "Լուսավոր ննջասենյակ · B1",
+    "eye": [
+      2.18,
+      0.34,
+      1.5
+    ],
+    "target": [
+      1.03,
+      3.14,
+      1.02
+    ],
+    "horizontal_fov_deg": 75,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  },
+  {
+    "file": "04-bedroom-2.jpg",
+    "name": "Ներքին սենյակ՝ քնելու օգտագործմամբ",
+    "eye": [
+      0.58,
+      -0.87,
+      1.48
+    ],
+    "target": [
+      1.9,
+      -3.5,
+      1.23
+    ],
+    "horizontal_fov_deg": 76,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  },
+  {
+    "file": "05-bathroom.jpg",
+    "name": "Համատեղ սանհանգույց",
+    "eye": [
+      3.75,
+      -2.53,
+      1.58
+    ],
+    "target": [
+      5.64,
+      -4.04,
+      0.99
+    ],
+    "horizontal_fov_deg": 91,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  },
+  {
+    "file": "06-balcony.jpg",
+    "name": "Ապակեպատ պատշգամբ",
+    "eye": [
+      1.15,
+      7.64,
+      1.48
+    ],
+    "target": [
+      6.72,
+      6.15,
+      1.23
+    ],
+    "horizontal_fov_deg": 78,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  },
+  {
+    "file": "07-facade.jpg",
+    "name": "Արտաքին դիտակետ",
+    "eye": [
+      12.4,
+      17.35,
+      5.32
+    ],
+    "target": [
+      4.57,
+      4.2,
+      1.14
+    ],
+    "horizontal_fov_deg": 55,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  },
+  {
+    "file": "08-cutaway.jpg",
+    "name": "Վերևից եռաչափ կտրվածք",
+    "eye": [
+      10.9,
+      -9.0,
+      20.5
+    ],
+    "target": [
+      5.0,
+      1.2,
+      0.1
+    ],
+    "horizontal_fov_deg": 56,
+    "up": [
+      0,
+      0,
+      1
+    ],
+    "model": "05-model/apartment.ifc"
+  }
+]
