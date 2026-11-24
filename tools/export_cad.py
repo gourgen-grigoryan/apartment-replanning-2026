@@ -97,7 +97,7 @@ def existing():
 def architecture():
     dr = Drawing("X-BASE")
     room_layer=dr.layer("A-SPACE",-8)  # closed polygons for area inquiry, off by default
-    centers={"B1":(.44,3.86),"B2":(6.19,3.91),"ST":(3.30,.54),"H2":(7.1,.06),"BA":(5.22,-3.04),"H1":(5.89,-1.89),"ST2":(1.03,-3.86),"BAL":(3.1,6.47),"SH":(7.32,-2.06),"SR":(9.78,-2.17)}
+    centers={"B1":(.22,3.91),"B2":(.45,-2.40),"ST":(3.35,1.15),"BA":(4.20,-3.74),"H1":(3.78,-.97),"BAL":(3.1,6.47),"SH":(7.32,-2.06),"SR":(9.78,-2.17)}
     for r in design["rooms"]:
         dr.poly(room_layer,r["points"],True)
         dr.text(dr.layer("A-ROOM-NAME",8),centers[r["id"]],r["name"]+f"  {r['area']:.2f}",.105)

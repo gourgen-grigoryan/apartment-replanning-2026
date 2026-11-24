@@ -60,7 +60,7 @@ def page(c,code,title,subtitle,scale='սխեմա'):
     ln(c,35,48,W-35,48,SILVER,.8)
     txt(c,38,26,code+'    /    '+scale,11,'Bold')
     txt(c,360,26,'Նախնական նախագիծ  ·  Կապակցումները և նիշերը ենթակա են չափագրման',11,'Arm',GRAY)
-    txt(c,W-185,26,'23.11.2026    /    R2',11,'Bold')
+    txt(c,W-185,26,'23.11.2026    /    R3',11,'Bold')
 def pxy(p): return (61+p[0]*72/0.0254/60,352+p[1]*72/0.0254/60)
 def path(c,points,tone,width=1.5,dash=(),close=False,fill=None):
     if not points: return
@@ -109,6 +109,12 @@ def draw_base(c,base,arch):
         for lo,hi in sorted(holes)+[(length,length)]:
             if lo>last:path(c,[xy(last),xy(lo)],'#8B9EA4',max(1,w.get('t',.1)*31))
             last=max(last,hi)
+    for f in arch.get('furniture',[]):
+        x,y,w,d=[f[k] for k in ('x','y','w','d')]
+        path(c,[(x,y),(x+w,y),(x+w,y+d),(x,y+d)],'#CDD8D8',.55,close=True)
+    for label,p in [('B1',(.21,.25)),('ST',(3.07,.27)),('B2',(.42,-1.18)),('H1',(3.75,-1.92)),('BA',(3.77,-2.65))]:
+        txt(c,*pxy(p),label,8,'Bold','#738785')
+    txt(c,*pxy((7.12,-1.31)),'№3',8,'Bold','#627A78')
     path(c,base['features']['column'],'#546F77',1,close=True,fill='#9BAFB0')
     txt(c,*pxy((3.9,6.7)),'Պատշգամբ',10,'Arm',GRAY)
     txt(c,*pxy((7.2,-4.65)),'Ընդհանուր',9,'Arm',GRAY)

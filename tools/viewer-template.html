@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="hy">
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Բնակարանի եռաչափ մոդել · R2</title>
+<title>Բնակարանի եռաչափ մոդել · ___REVISION___</title>
 <style>
 :root{color-scheme:light;--paper:#f7f5ef;--ink:#213c37;--muted:#596c62;--rule:#d9dfd6;--brand:#20584d}
 *{box-sizing:border-box}body{margin:0;font:14px/1.48 Arial,'Sylfaen',sans-serif;color:var(--ink);background:var(--paper)}
@@ -26,7 +26,7 @@ label.toggle{display:flex;gap:8px;align-items:center;margin:6px 0;cursor:pointer
 @media(max-width:760px){main{display:block;min-height:0}header{padding:12px 15px}.stage{height:58dvh;min-height:350px}aside{max-height:none;border-left:none;border-top:1px solid var(--rule);padding:15px}header small{white-space:nowrap}.stagefooter{left:6px;right:6px;font-size:10px}.small{font-size:12px}}
 </style>
 <main>
-<header><h1>Բնակարանի եռաչափ մոդել</h1><small>Մուտք №3 · R2 · 23.11.2026</small></header>
+<header><h1>Բնակարանի եռաչափ մոդել</h1><small>Մուտք №3 · ___REVISION___ · 23.11.2026</small></header>
 <div class="stage" id="stage"><canvas id="scene" tabindex="0" aria-label="Պտտվող եռաչափ մոդել"></canvas><canvas id="overlay" aria-hidden="true"></canvas>
 <div class="stagefooter"><span>Քաշել՝ պտտելու համար · Անիվ՝ խոշորացում</span><span id="scale"></span></div></div>
 <aside>
@@ -52,8 +52,25 @@ const layers=[
 const state=Object.fromEntries(layers.map(d=>[d[0],d[3]])), groups={CW:'water',HW:'water',DWV:'drain',DROP:'drain',FLEX:'drain',ACCESS:'drain',CABLE:'power',POWER:'power',SWITCH:'light',LIGHT:'light',REF:'hvac',SUP:'hvac',EXH:'hvac',COND:'hvac',HVAC:'hvac',HEAT:'hvac',TRANSFER:'hvac'};
 const systems={CW:'#196fa8',HW:'#c14943',DWV:'#724021',DROP:'#924e20',FLEX:'#a76a24',ACCESS:'#c09555',LIGHT:'#cb930c',SWITCH:'#b18622',CABLE:'#925a19',POWER:'#9e6620',REF:'#883778',SUP:'#27705f',EXH:'#b26935',COND:'#2e92a3',HVAC:'#4f8677',HEAT:'#b93e3c',TRANSFER:'#5b8848'};
 const labelNames={bed:'Մահճակալ',sofa:'Բազմոց',table:'Սեղան',bench:'Նստարան',chair:'Աթոռ',sink:'Խոհանոցի լվացարան',dishwasher:'Սպասք լվացող մեքենա',hob:'Սալօջախ',fridge:'Սառնարան',shower:'Ցնցուղ',toilet:'Զուգարանակոնք',basin:'Լվացարան',washer:'Լվացքի մեքենա'};
-const roomColors={ST:'#d4b791',B1:'#d2b893',B2:'#d2b893',BA:'#a3b9ad',H1:'#c4aa89',H2:'#d3b99b',ST2:'#d4b791',BAL:'#c1c4af',SH:'#babcb0',SR:'#b9b7a5'};
-const centers={ST:[4.10,.47],B1:[1.45,2.97],B2:[7.38,3.04],BA:[5.97,-3.55],H1:[6.34,-1.41],H2:[6.97,.42],ST2:[2.41,-3.4],BAL:[4.30,6.68],SH:[7.98,-3.54],SR:[10.28,-2.1]};
+const roomColors={ST:'#d4b791',B1:'#d2b893',B2:'#d2b893',BA:'#a3b9ad',H1:'#c4aa89',BAL:'#c1c4af',SH:'#babcb0',SR:'#b9b7a5'};
+function labelPoint(poly){
+ const xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]),lo=[Math.min(...xs),Math.min(...ys)],hi=[Math.max(...xs),Math.max(...ys)];
+ let best=lo,max=-1;
+ for(let i=0;i<17;i++)for(let j=0;j<17;j++){
+  const x=lo[0]+(hi[0]-lo[0])*(i+.5)/17,y=lo[1]+(hi[1]-lo[1])*(j+.5)/17;
+  let inside=false,distance=Infinity;
+  for(let k=0;k<poly.length;k++){
+   const p=poly[k],q=poly[(k+1)%poly.length],dx=q[0]-p[0],dy=q[1]-p[1];
+   if((p[1]>y)!==(q[1]>y)&&x<p[0]+(y-p[1])*dx/dy)inside=!inside;
+   const t=Math.max(0,Math.min(1,((x-p[0])*dx+(y-p[1])*dy)/(dx*dx+dy*dy||1)));
+   distance=Math.min(distance,Math.hypot(x-p[0]-t*dx,y-p[1]-t*dy));
+  }
+  const score=distance-.025*Math.hypot(x-(lo[0]+hi[0])/2,y-(lo[1]+hi[1])/2);
+  if(inside&&score>max){best=[x,y];max=score}
+ }
+ return best;
+}
+const centers=Object.fromEntries(a.rooms.map(r=>[r.id,labelPoint(r.points)]));
 const cats={}, parts=[],traces=[], ids=new Map();
 const ns='մ',fmt=(v,k=2)=>Number(v).toFixed(k),len=(p,q)=>Math.hypot(q[0]-p[0],q[1]-p[1]);
 const mid=(p,q)=>[(p[0]+q[0])/2,(p[1]+q[1])/2];
@@ -68,7 +85,8 @@ function slab(id,p,q,t,z,h,c,layer='arch',alpha=1){
  polygon(id,[[p[0]-nx,p[1]-ny],[q[0]-nx,q[1]-ny],[q[0]+nx,q[1]+ny],[p[0]+nx,p[1]+ny]],z,h,c,layer,alpha);
 }
 for(const r of a.rooms){
- record(r.id,r.name,'Մաքուր մակերես՝ '+fmt(r.area)+' մ²։ '+r.points.length+' գագաթ։','Սենքեր');
+ const detail=r.id==='B2'?' Աղբյուրում՝ 13.55 մ²։ Արտաքին պատուհան չկա։ Նախատեսված են արհեստական լուսավորություն և մեխանիկական օդափոխություն։':'';
+ record(r.id,r.name,'Մաքուր մակերես՝ '+fmt(r.area)+' մ²։'+detail,'Սենքեր');
  polygon(r.id,r.points,-.115,0,roomColors[r.id]);}
 function lerp(p,q,t){return p.map((v,i)=>v+(q[i]-v)*t)}
 for(const w of a.walls){
@@ -95,14 +113,8 @@ for(const d of a.openings){
  slab(key,d.a,d.b,.036,t-.035,t,'#665e4d');
  if(d.kind==='window'||d.kind==='internal_window'){
   slab(key,d.a,d.b,.025,d.sill+.03,t-.03,'#8cb7b0','glass',.25);slab(key,d.a,d.b,.045,d.sill,d.sill+.035,'#638479');
- }else if(d.kind==='sliding'){
-  const direction=lerp(d.a,d.b,.5), delta=(d.b[0]-d.a[0])/2;
-  slab(key,[d.a[0]-delta,d.a[1]+.015],d.a,.04,0,2.08,'#b5946c');
-  slab(key,d.b,[d.b[0]+delta,d.b[1]+.015],.04,0,2.08,'#b5946c');
  }else{
-  const hinge=d[d.hinge], vec=d.swing;
-  const tip=[hinge[0]+le*vec[0],hinge[1]+le*vec[1]];
-  slab(key,hinge,tip,.035,0,d.height-.03,d.kind==='glazed_door'?'#89bcb5':'#b99a72',d.kind==='glazed_door'?'glass':'arch',d.kind==='glazed_door'?.32:1);
+  slab(key,d.a,d.b,.035,0,d.height-.03,d.kind==='glazed_door'?'#89bcb5':'#b99a72',d.kind==='glazed_door'?'glass':'arch',d.kind==='glazed_door'?.32:1);
  }
 }
 const bp=a.rooms.find(r=>r.id==='BAL').points;
@@ -134,12 +146,13 @@ for(const f of a.furniture){
    if(['sink','basin','hob','dishwasher'].includes(kind)){b(x,y,h-.03,w,d,.03,'#dbdacf');b(x+.07,y+.075,h,w-.14,d-.15,.014,kind==='hob'?dark:kind==='dishwasher'?'#dfded2':'#9ba9a0');}
  }
 }
+record('K-UP','Խոհանոցի վերին պահարաններ','Համընկնում են խոհանոցի աշխատանքային շարքին։','Կահավորում');
 for(const r of m.routes){const g=groups[r.system];if(!g)continue;const key='S-'+r.id;record(key,r.name,r.id+' · '+r.system+' · '+fmt(r.length_plan??r.points.slice(1).reduce((v,p,i)=>v+len(r.points[i],p),0))+' մ։','Ինժեներական գծեր');traces.push({id:key,pts:r.points,layer:g,color:systems[r.system],width:r.system==='DWV'?3:2});}
 for(const e of m.elements){const g=groups[e.system];if(!g)continue;const key='E-'+e.id;const sz=e.size,pt=e.point;
 record(key,e.name,e.id+' · X, Y, Z՝ '+pt.map(z=>fmt(z,3)).join(', ')+' մ։','Ինժեներական կետեր');
 box(key,pt[0]-sz[0]/2,pt[1]-sz[1]/2,pt[2]-sz[2]/2,Math.max(.04,sz[0]),Math.max(.04,sz[1]),Math.max(.04,sz[2]),systems[e.system],g);}
 traces.push({id:'GUEST',pts:a.routes.guest.map(p=>[...p,.045]),layer:'guest',color:'#a64e30',width:3});
-record('GUEST','Հյուրի ուղի','Մուտքից դեպի պատշգամբի դռան առանցքը՝ '+fmt(a.lengths.guest)+' մ։ Երկու ննջարաններն էլ շրջանցվում են։','Շարժում');
+record('GUEST','Հյուրի ուղի','Մուտք №3-ից դեպի պատշգամբ՝ '+fmt(a.lengths.guest)+' մ։ Ուղին անցնում է միջանցքով և ստուդիայով։','Շարժում');
 for(const [id,name,c,on] of layers){const lb=document.createElement('label');lb.className='toggle';const it=document.createElement('input');it.type='checkbox';it.checked=on;it.id='layer-'+id;it.onchange=()=>{state[id]=it.checked;draw()};
  const sw=document.createElement('span');sw.className='dot';sw.style.background=c;lb.append(it,sw,document.createTextNode(name));$('layers').append(lb);}
 for(const [name,keys] of Object.entries(cats)){const group=document.createElement('optgroup');group.label=name;
@@ -170,6 +183,8 @@ function tri(poly){
  if(ord.length===3)triangles.push(ord.slice());triCache.set(poly,triangles);return triangles;
 }
 let program,buffer,vpos,vcol;
+let sceneProgram,sceneBuffer,scenePos,sceneCol,uniforms;
+const meshParts=model.mesh.parts;
 if(gl){
  const shader=(t,s)=>{const v=gl.createShader(t);gl.shaderSource(v,s);gl.compileShader(v);if(!gl.getShaderParameter(v,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(v));return v};
  program=gl.createProgram();
@@ -179,6 +194,42 @@ if(gl){
  vpos=gl.getAttribLocation(program,'p');vcol=gl.getAttribLocation(program,'c');gl.enableVertexAttribArray(vpos);gl.enableVertexAttribArray(vcol);
  gl.vertexAttribPointer(vpos,3,gl.FLOAT,false,28,0);gl.vertexAttribPointer(vcol,4,gl.FLOAT,false,28,12);
  gl.clearColor(0,0,0,0);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+ sceneProgram=gl.createProgram();
+ gl.attachShader(sceneProgram,shader(gl.VERTEX_SHADER,`attribute vec3 p;attribute vec4 c;
+ uniform vec3 centre,right,vertical,depth;uniform vec2 scale,pan;varying vec4 colour;varying float level;
+ void main(){vec3 w=p*.001,d=w-centre;level=w.z;colour=c;gl_Position=vec4(pan+scale*vec2(dot(d,right),dot(d,vertical)),-dot(d,depth)/36.,1.);}`));
+ gl.attachShader(sceneProgram,shader(gl.FRAGMENT_SHADER,`precision mediump float;uniform float limit,tint;uniform vec3 overrideColour;varying vec4 colour;varying float level;
+ void main(){if(level>limit)discard;gl_FragColor=vec4(mix(colour.rgb,overrideColour,tint),tint==1.?1.:colour.a);}`));
+ gl.linkProgram(sceneProgram);
+ if(!gl.getProgramParameter(sceneProgram,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(sceneProgram));
+ scenePos=gl.getAttribLocation(sceneProgram,'p');sceneCol=gl.getAttribLocation(sceneProgram,'c');
+ uniforms=Object.fromEntries(['centre','right','vertical','depth','scale','pan','limit','tint','overrideColour'].map(k=>[k,gl.getUniformLocation(sceneProgram,k)]));
+ sceneBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,sceneBuffer);
+ gl.bufferData(gl.ARRAY_BUFFER,Uint8Array.from(atob(model.mesh.vertices),v=>v.charCodeAt(0)),gl.STATIC_DRAW);
+}
+function drawMesh(picking=false){
+ gl.useProgram(sceneProgram);gl.bindBuffer(gl.ARRAY_BUFFER,sceneBuffer);
+ gl.enableVertexAttribArray(scenePos);gl.enableVertexAttribArray(sceneCol);
+ gl.vertexAttribPointer(scenePos,3,gl.SHORT,false,10,0);gl.vertexAttribPointer(sceneCol,4,gl.UNSIGNED_BYTE,true,10,6);
+ const cy=Math.cos(yaw),sy=Math.sin(yaw),cp=Math.cos(pitch),sp=Math.sin(pitch);
+ gl.uniform3fv(uniforms.centre,target);gl.uniform3f(uniforms.right,cy,sy,0);
+ gl.uniform3f(uniforms.vertical,-sy*sp,cy*sp,cp);gl.uniform3f(uniforms.depth,sy*cp,-cy*cp,sp);
+ gl.uniform2f(uniforms.scale,2*view.s/view.w,2*view.s/view.h);gl.uniform2f(uniforms.pan,2*panX/view.w,-2*panY/view.h);
+ let triangles=0,systemTriangles=0;
+ for(let pass=0;pass<3;pass++){
+  if(pass===1&&!picking){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false)}
+  if(pass===2){gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND)}
+  for(let i=0;i<meshParts.length;i++){
+   const [key,layer,offset,count,glass]=meshParts[i],system=groups[layer];
+   if((system?2:glass?1:0)!==pass||(system&&!state[system])||(layer==='furn'&&!state.furn))continue;
+   gl.uniform1f(uniforms.limit,system?15:cut);
+   const value=i+1,override=picking?[(value&255)/255,(value>>8&255)/255,(value>>16&255)/255]:key===selected?rgb('#d1882d'):system?rgb(systems[layer]):[0,0,0];
+   gl.uniform3fv(uniforms.overrideColour,override);gl.uniform1f(uniforms.tint,picking?1:key===selected?.8:system?.75:0);
+   gl.drawArrays(gl.TRIANGLES,offset,count);triangles+=count/3;if(system)systemTriangles+=count/3;
+  }
+ }
+ gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);
+ return [triangles,systemTriangles];
 }
 function draw(){
  const bb=$('stage').getBoundingClientRect();view.w=bb.width;view.h=bb.height;ratio=Math.min(2,devicePixelRatio||1);
@@ -188,7 +239,7 @@ function draw(){
  }
  view.s=Math.min(view.w/15.3,view.h/14.9)*zoom;
  ui.setTransform(ratio,0,0,ratio,0,0);ui.clearRect(0,0,view.w,view.h);
- const opaque=[],glass=[],over=[],filled=[];picked=[];
+ const opaque=[],glass=[],over=[],caps=[];picked=[];
  function face(id,points,tris,color,shade,alpha,pass){
    const pp=points.map(project),dep=pp.reduce((v,p)=>v+p[2],0)/pp.length;
    const base=id===selected?rgb('#d08730'):rgb(color),tint=base.map(v=>Math.min(1,v*shade));
@@ -201,6 +252,7 @@ function draw(){
    if(z>=h)continue;
    const p=part.p,points=p.map(w=>[...w,h]),pass=system?2:0;
    face(part.id,points,tri(p),part.color,h<part.h-1e-7&&layer==='arch'?.78:1.015,part.alpha,pass);
+   if(layer==='arch'&&h<part.h-1e-7&&a.walls.some(w=>w.id===part.id))caps.push(picked[picked.length-1]);
    const ar=p.reduce((s,v,i)=>s+v[0]*p[(i+1)%p.length][1]-p[(i+1)%p.length][0]*v[1],0),winding=ar>=0?1:-1;
    for(let i=0;i<p.length;i++){
      const j=(i+1)%p.length,dx=p[j][0]-p[i][0],dy=p[j][1]-p[i][1],ll=Math.hypot(dx,dy);if(ll<1e-7)continue;
@@ -213,10 +265,14 @@ function draw(){
  function gpu(faces){
    const data=[];for(const f of faces)for(const t of f.tris)for(const i of t){const p=f.pp[i];data.push(p[0]*2/view.w-1,1-p[1]*2/view.h,-p[2]/36,...f.tint,f.alpha);}
    if(!data.length)return;
+   gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+   gl.enableVertexAttribArray(vpos);gl.enableVertexAttribArray(vcol);
+   gl.vertexAttribPointer(vpos,3,gl.FLOAT,false,28,0);gl.vertexAttribPointer(vcol,4,gl.FLOAT,false,28,12);
    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.DYNAMIC_DRAW);gl.drawArrays(gl.TRIANGLES,0,data.length/7);
  }
  const byDepth=(a,b)=>a.dep-b.dep;
- if(gl){gl.viewport(0,0,cv.width,cv.height);gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gpu(opaque);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gpu(glass.sort(byDepth));gl.disable(gl.DEPTH_TEST);gpu(over.sort(byDepth));gl.depthMask(true);}
+ let counts=[opaque.length+glass.length+over.length,over.length];
+ if(gl){gl.viewport(0,0,cv.width,cv.height);gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);counts=drawMesh();gpu(caps);}
  else{
     ctx.setTransform(ratio,0,0,ratio,0,0);ctx.clearRect(0,0,view.w,view.h);
     for(const set of [[...opaque,...glass].sort(byDepth),over.sort(byDepth)])for(const f of set){
@@ -241,7 +297,7 @@ function draw(){
  ui.strokeStyle='#3c564c';ui.lineWidth=1.5;ui.beginPath();ui.moveTo(bx,by-3);ui.lineTo(bx,by+2);ui.lineTo(bx+bar*view.s,by+2);ui.lineTo(bx+bar*view.s,by-3);ui.stroke();
  ui.font='11px Arial';ui.textAlign='center';ui.fillStyle='#365146';ui.fillText(bar+' մ',bx+bar*view.s/2,by-7);
  $('height').textContent='+'+fmt(cut)+' մ';$('scale').textContent=state.water||state.drain||state.power||state.light||state.hvac?'Ցանցերը՝ թափանցող տեսքով':'Մետր · ±0.000 պատրաստի հատակ';
- cv.dataset.renderer=gl?'WebGL':'Canvas2D';cv.dataset.faces=String(opaque.length+glass.length+over.length);cv.dataset.systemElements=String(over.length);
+ cv.dataset.renderer=gl?'WebGL':'Canvas2D';cv.dataset.faces=String(counts[0]);cv.dataset.systemElements=String(counts[1]);
 }
 function choose(key){
  selected=key;const z=ids.get(key);$('inspect').value=key;
@@ -253,6 +309,11 @@ function choose(key){
  draw()
 }
 function hit(px,py){
+ if(gl){
+  const pixel=new Uint8Array(4);gl.disable(gl.DITHER);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);drawMesh(true);
+  gl.readPixels(Math.min(cv.width-1,Math.max(0,Math.floor(px*ratio))),Math.min(cv.height-1,Math.max(0,cv.height-1-Math.floor(py*ratio))),1,1,gl.RGBA,gl.UNSIGNED_BYTE,pixel);
+  gl.enable(gl.DITHER);const index=pixel[0]+256*pixel[1]+65536*pixel[2]-1;choose(meshParts[index]?.[0]||'');return;
+ }
  function inPoly(p){let inside=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const a=p[i],b=p[j];if((a[1]>py)!==(b[1]>py)&&px<(b[0]-a[0])*(py-a[1])/(b[1]-a[1])+a[0])inside=!inside;}return inside}
  let best=null;for(const f of picked)if((!best||f.dep>best.dep)&&inPoly(f.pp))best=f;
  choose(best?best.id:'');

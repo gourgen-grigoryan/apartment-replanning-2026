@@ -111,7 +111,7 @@ for r in D["rooms"]:
     tab=r["id"];p=r["points"]
     sp=obj("SPACE-"+tab,"IFCSPACE",r["name"],"space");extrude(sp,p,0,D["height"],"plaster")
     floor=obj("SL-"+tab,"IFCSLAB",r["name"]+"․ հատակ","floor")
-    extrude(floor,p,-.12,.12, "tile" if tab in ("BAL","SH","SR","H1","H2") else "darktile" if tab=="BA" else "parquet")
+    extrude(floor,p,-.12,.12, "tile" if tab in ("BAL","SH","SR","H1") else "darktile" if tab=="BA" else "parquet")
     ceil=obj("CE-"+tab,"IFCCOVERING",r["name"]+"․ առաստաղ","ceiling")
     extrude(ceil,p,D["height"],.105,"plaster")
 bal=next(r["points"] for r in D["rooms"] if r["id"]=="BAL")
@@ -175,8 +175,14 @@ for f in D["furniture"]:
                 for j in [.32,.70]:
                     cyl(o,[x+w*i,y+d*j,h+.012],[x+w*i,y+d*j,h+.015],.077,"metal",24)
                     cyl(o,[x+w*i,y+d*j,h+.015],[x+w*i,y+d*j,h+.016],.072,"black",24)
+        elif k=="fridge":
+            for zz,hh in ((.14,.42),(.63,.63)):box(o,x+.010,y+d*.84,zz,.020,.023,hh,"black")
+        elif k=="dishwasher":
+            box(o,x+.010,y+.035,h-.15,.018,d-.07,.047,"black")
         elif k=="washer":
-            cyl(o,[x+.01,y+d/2,.44],[x+.04,y+d/2,.44],.205,"metal",28);cyl(o,[x+.001,y+d/2,.44],[x+.011,y+d/2,.44],.164,"black",28)
+            cyl(o,[x+w/2,y+d-.014,.44],[x+w/2,y+d+.012,.44],.205,'ceramic',32)
+            cyl(o,[x+w/2,y+d+.013,.44],[x+w/2,y+d+.018,.44],.164,'black',32)
+            box(o,x+.043,y+d-.005,h-.15,w*.35,.012,.064,'black')
     elif k=="shower":
         box(o,x,y,.002,w,d,.035,"ceramic");box(o,x,y,.04,.013,d,h-.04,"glass")
         for yy in [y+.012,y+d-.012]:cyl(o,[x+.006,yy,.04],[x+.006,yy,h],.014,"black")
@@ -184,6 +190,18 @@ for f in D["furniture"]:
     elif k=="toilet":
         pillow(o,x+.09,y+.055,0,w-.20,d-.11,.32,"ceramic",.72);pillow(o,x,y,.25,w,d,.17,"ceramic",.72)
         pillow(o,x+.03,y+.04,.40,w*.70,d-.08,.035,"linen",.76);pillow(o,x+w-.15,y,.38,.15,d,.38,"ceramic",.22)
+
+# Wall units follow the worktop run and the two task-light mounting levels.
+modules=sorted((f for f in D['furniture'] if f['kind'] in ('hob','dishwasher','sink')),key=lambda f:f['y'])
+if modules:
+    upper=obj('K-UP','IFCFURNITURE','Խոհանոցի վերին պահարաններ','furn')
+    task_heights=[e['point'][2]+e['size'][2]/2 for e in S['elements'] if e['id'] in ('L-K1','L-K2')]
+    base=max(task_heights,default=1.54)
+    for module in modules:
+        x,y,d=module['x']+module['w']-.34,module['y'],module['d']
+        box(upper,x+.012,y,base,.328,d,.72,'oak')
+        box(upper,x,y+.004,base+.005,.018,d-.008,.709,'sage')
+        box(upper,x-.003,y+.035,base+.045,.016,d-.07,.012,'black')
 
 route_types={"CABLE":"IFCCABLESEGMENT","SUP":"IFCDUCTSEGMENT","EXH":"IFCDUCTSEGMENT","TRANSFER":"IFCDUCTSEGMENT"}
 for r in S["routes"]:
@@ -193,9 +211,21 @@ for r in S["routes"]:
 for e in S["elements"]:
     id,sys=e["id"],e["system"];x,y,z=e["point"];w,d,h=e["size"]
     typ={"LIGHT":"IFCLIGHTFIXTURE","SWITCH":"IFCSWITCHINGDEVICE","POWER":"IFCOUTLET" if id!="DB" else "IFCELECTRICDISTRIBUTIONBOARD","HVAC":"IFCUNITARYEQUIPMENT","SUP":"IFCAIRTERMINAL","EXH":"IFCAIRTERMINAL","HEAT":"IFCSPACEHEATER"}.get(sys,"IFCBUILDINGELEMENTPROXY")
-    o=obj("MEP-"+id,typ,e["name"],"fixture" if sys in ("LIGHT","HVAC","HEAT","SUP","EXH","POWER","SWITCH") else "systems");o["system"]=sys;o["element_id"]=id
+    typ={'AHU':'IFCUNITARYEQUIPMENT','PL':'IFCDUCTFITTING','EF-K':'IFCFAN','EF-BA':'IFCFAN'}.get(id,typ)
+    internal=id.startswith(('EF-','SV-')) or id in ('PL','AHU')
+    layer='fixture' if sys in ('LIGHT','HVAC','HEAT','SUP','EXH','POWER','SWITCH') and not internal else 'systems'
+    o=obj("MEP-"+id,typ,e["name"],layer);o["system"]=sys;o["element_id"]=id
     if sys=="LIGHT" and .55<w/d<1.7:
-        cyl(o,[x,y,z-h/2],[x,y,z+h/2],min(w,d)/2,"light",20)
+        cyl(o,[x,y,z-h/2],[x,y,z-h/2+.008],min(w,d)*.47,'light',28)
+        cyl(o,[x,y,z-h/2+.008],[x,y,z+h/2],min(w,d)/2,'brass' if id=='L-T' else 'ceramic',28)
+        cyl(o,[x,y,z+h/2],[x,y,D['height']],.007 if id=='L-T' else min(w,d)*.31,'black' if id=='L-T' else 'ceramic')
+    elif sys in ('SUP','EXH') and id.startswith(('SD-','EX-')):
+        box(o,x-w/2,y-d/2,z-h/2,w,d,h,'ceramic')
+        cyl(o,[x,y,z+h/2],[x,y,D['height']],min(w,d)*.35,'metal')
+        for k in range(4):box(o,x-w*.36,y-d*.30+k*d*.17,z-h/2-.002,w*.72,d*.075,.002,'black')
+    elif sys=='LIGHT':
+        box(o,x-w/2,y-d/2,z-h/2+.006,w,d,h-.006,'metal')
+        box(o,x-w/2,y-d/2,z-h/2,w,d,.006,'light')
     else:box(o,x-w/2,y-d/2,z-h/2,w,d,h,"light" if sys=="LIGHT" else "ceramic")
     if sys=="HVAC" and id.startswith("IU"):
         if d<w:box(o,x-w*.44,y-d*.51,z-h*.34,w*.88,.012,.026,"black")

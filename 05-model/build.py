@@ -78,16 +78,38 @@ for op in D["openings"]:
 for k,p in systems.items():
     sg=ent("IFCSYSTEM",gid("system"+k),"$",string(k),"$","$")
     ent("IFCRELASSIGNSTOGROUP",gid("group"+k),"$","$","$",arr(p),"$",sg)
+
+def assign_properties(element,definition):
+    ent('IFCRELDEFINESBYPROPERTIES',gid('properties:'+element),'$','$','$',arr([ids[element]]),definition)
+
+for room in D['rooms']:
+    key='SPACE-'+room['id']
+    area=ent('IFCQUANTITYAREA',string('NetFloorArea'),'$','$',num(room['area']),'$')
+    quantity=ent('IFCELEMENTQUANTITY',gid('quantities:'+key),'$',string('Qto_SpaceBaseQuantities'),'$','$',arr([area]))
+    assign_properties(key,quantity)
+
+for route in S['routes']:
+    key='MEP-'+route['id']
+    values=[('GeometryDiameter','IFCPOSITIVELENGTHMEASURE',route['diameter_m'])]
+    for field,name,typ in [('length_plan','PlanLength','IFCLENGTHMEASURE'),('slope','Slope','IFCRATIOMEASURE'),('invert_start','StartInvert','IFCLENGTHMEASURE'),('invert_end','EndInvert','IFCLENGTHMEASURE')]:
+        if route.get(field) is not None: values.append((name,typ,route[field]))
+    properties=[ent('IFCPROPERTYSINGLEVALUE',string(n),'$',t+'('+num(v)+')','$') for n,t,v in values]
+    definition=ent('IFCPROPERTYSET',gid('route-properties:'+key),'$',string('Apartment_ServiceRoute'),'$',arr(properties))
+    assign_properties(key,definition)
+
+loadbearing=ent('IFCPROPERTYSINGLEVALUE',string('LoadBearing'),'$','IFCBOOLEAN(.T.)','$')
+wallset=ent('IFCPROPERTYSET',gid('LB-properties'),'$',string('Pset_WallCommon'),'$',arr([loadbearing]))
+assign_properties('LB',wallset)
 head="""ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');
-FILE_NAME('apartment.ifc','2026-11-23T12:00:00',('Design team'),('Apartment project'),'Python model compiler','Apartment R2','Concept design');
+FILE_NAME('apartment.ifc','2026-11-23T12:00:00',('Design team'),('Apartment project'),'Python model compiler','Apartment {revision}','Concept design');
 FILE_SCHEMA(('IFC4'));
 ENDSEC;
 DATA;
 """
 out=HERE/"apartment.ifc"
-out.write_text(head+"".join("#%i=%s;\n"%(i+1,s) for i,s in enumerate(lines))+"ENDSEC;\nEND-ISO-10303-21;\n",encoding="ascii")
+out.write_text(head.format(revision=D['revision'])+"".join("#%i=%s;\n"%(i+1,s) for i,s in enumerate(lines))+"ENDSEC;\nEND-ISO-10303-21;\n",encoding="ascii")
 # Առանձին վերաընթերցում՝ STEP գրառում/հղում/տեսակ և հիմնական քանակներ։
 raw=out.read_text(encoding="ascii"); statements=re.findall(r"^#(\d+)=(IFC\w+)\((.*)\);$",raw,re.M)
 assert len(statements)==len(lines)
@@ -98,13 +120,13 @@ assert len(systems)>10 and sum(1 for i in expected if i.startswith("O-"))==len(D
 print(out.name, out.stat().st_size, "bytes;", len(expected),"products;",len(lines),"STEP records")
 
 cams=[
- ("01-studio","Ստուդիա", [4.26,.36,1.54],[3.98,3.64,1.02],77),
- ("02-kitchen","Խոհանոց",[1.09,-1.12,1.54],[4.66,-3.96,.93],76),
- ("03-bedroom-1","Ննջարան 1",[2.65,1.69,1.48],[.60,3.43,.89],76),
- ("04-bedroom-2","Ննջարան 2",[6.68,2.04,1.50],[8.12,3.63,.99],82),
- ("05-bathroom","Սանհանգույց",[5.56,-2.48,1.58],[6.42,-4.29,1.03],77),
+ ("01-studio","Հյուրասենյակ և ճաշասրահ", [3.06,.42,1.52],[5.60,3.43,1.10],78),
+ ("02-kitchen","Բաց խոհանոց",[5.53,2.04,1.49],[8.46,1.28,1.18],71),
+ ("03-bedroom-1","Լուսավոր ննջասենյակ · B1",[2.18,.34,1.50],[1.03,3.14,1.02],75),
+ ("04-bedroom-2","Ներքին սենյակ՝ քնելու օգտագործմամբ",[.58,-.87,1.48],[1.90,-3.50,1.23],76),
+ ("05-bathroom","Համատեղ սանհանգույց",[3.75,-2.53,1.58],[5.64,-4.04,.99],91),
  ("06-balcony","Ապակեպատ պատշգամբ",[1.15,7.64,1.48],[6.72,6.15,1.23],78),
- ("07-facade","Արտաքին դիտակետ",[12.4,17.35,5.32],[4.39,6.05,1.05],51),
+ ("07-facade","Արտաքին դիտակետ",[12.4,17.35,5.32],[4.57,4.20,1.14],55),
  ("08-cutaway","Վերևից եռաչափ կտրվածք",[10.9,-9.0,20.5],[5.0,1.20,.10],56)]
 viewdir=PROJECT/"07-views";viewdir.mkdir(exist_ok=True)
 (viewdir/"cameras.json").write_text(json.dumps([dict(file=k+".jpg",name=n,eye=p,target=t,horizontal_fov_deg=f,up=[0,0,1],model="05-model/apartment.ifc") for k,n,p,t,f in cams],ensure_ascii=False,indent=2),encoding="utf-8")
@@ -124,6 +146,5 @@ with (work/"cameras.txt").open("w",encoding="ascii") as f:
 with (work/"lights.txt").open("w",encoding="ascii") as f:
     for e in S["elements"]:
         if e["system"]=="LIGHT":
-            power=16 if e["id"] in ("L-T","L-M","L-K1","L-K2") else 10
-            f.write(" ".join(map(str,[*e["point"],power]))+"\n")
+            f.write(" ".join(map(str,[*e['point'],e['flux_lm'],e['size'][2]]))+"\n")
 print("Cameras:",len(cams),"; triangles:",(work/"triangles.dat").stat().st_size//44)

@@ -34,6 +34,7 @@ public static class Render
     static Tri[] triangles;
     static Node tree;
     static V[] palette, lights;
+    static double[] luminousFlux, lightHeight;
     static bool cut, outside;
     static readonly V white=new V(1,1,1), up=new V(0,0,1);
     static Node Build(int first,int last){
@@ -111,13 +112,12 @@ public static class Render
         V sun=new V(-.29,.77,.57).Unit();cosine=n.Dot(sun);
         if(cosine>0&&!Blocked(start,sun,35))illum+=new V(1.0,.90,.72)*(cosine*.63);
         if(!cut&&!outside){
-            // Select the closest emitting fixtures, then test wall occlusion.
-            int a=-1,b=-1,c=-1;double da=1e6,db=1e6,dc=1e6;
-            for(int i=0;i<lights.Length;i++){V delta=lights[i]-p;double ds=delta.Dot(delta);if(ds<da){c=b;dc=db;b=a;db=da;a=i;da=ds;}else if(ds<db){c=b;dc=db;b=i;db=ds;}else if(ds<dc){c=i;dc=ds;}}
-            for(int j=0;j<3;j++){
-                V delta=lights[j==0?a:j==1?b:c]+new V((Rand(ref seed)-.5)*.07,(Rand(ref seed)-.5)*.07,-.065)-p;
+            for(int j=0;j<lights.Length;j++){
+                V delta=lights[j]-p;double squared=delta.Dot(delta);if(squared>25)continue;
+                delta+=new V((Rand(ref seed)-.5)*.045,(Rand(ref seed)-.5)*.045,-lightHeight[j]*.5-.013);
                 double ld=Math.Sqrt(delta.Dot(delta));V u=delta*(1/ld);cosine=n.Dot(u);
-                if(cosine>0&&!Blocked(start,u,ld-.11))illum+=new V(1,.85,.66)*(cosine*1.2/(1+.7*ld*ld));
+                double falloff=Math.Max(0,1-squared/25);
+                if(cosine>0&&!Blocked(start,u,ld-.025))illum+=new V(1,.89,.75)*(cosine*falloff*luminousFlux[j]/(1000+700*squared));
             }
         }
         V result=tx*illum;
@@ -134,7 +134,8 @@ public static class Render
         string work=args[0],dest=args[1];int width=args.Length>2?int.Parse(args[2]):1080,spp=args.Length>3?int.Parse(args[3]):4,height=width*2/3;
         string[] hex="e8e2d3 859484 bd926a 936849 bb956e b8b7a9 9b6854 eee5ce 818979 353a3b aeb7b8 d9d4c5 edece3 b5d7d4 a8bcbf fff1c9 acaaa0 7199af bd745e 649aaf bc9a60 859286".Split(' ');
         palette=Array.ConvertAll(hex,s=>{Color c=ColorTranslator.FromHtml("#"+s);return new V(Math.Pow(c.R/255.0,2.2),Math.Pow(c.G/255.0,2.2),Math.Pow(c.B/255.0,2.2));});
-        lights=Array.ConvertAll(File.ReadAllLines(Path.Combine(work,"lights.txt")),s=>ReadV(s.Split(' '),0));
+        string[][] sourceLights=Array.ConvertAll(File.ReadAllLines(Path.Combine(work,"lights.txt")),s=>s.Split(' '));
+        lights=Array.ConvertAll(sourceLights,s=>ReadV(s,0));luminousFlux=Array.ConvertAll(sourceLights,s=>Parse(s[3]));lightHeight=Array.ConvertAll(sourceLights,s=>Parse(s[4]));
         var list=new List<Tri>();
         using(var br=new BinaryReader(File.OpenRead(Path.Combine(work,"triangles.dat")))){
             while(br.BaseStream.Position<br.BaseStream.Length){V a=ReadV(br),b=ReadV(br),c=ReadV(br);V e=b-a,f=c-a;list.Add(new Tri{a=a,e=e,f=f,n=e.Cross(f).Unit(),mid=(a+b+c)*(1.0/3),min=V.Min(a,V.Min(b,c)),max=V.Max(a,V.Max(b,c)),mat=(int)br.ReadSingle(),group=(int)br.ReadSingle()});}
@@ -152,9 +153,24 @@ public static class Render
                 }
                 sum=sum*(1.0/spp);int i=y*stride+3*x;pixels[i]=(byte)Byte(sum.z);pixels[i+1]=(byte)Byte(sum.y);pixels[i+2]=(byte)Byte(sum.x);
             }});
+            // Remove isolated Monte Carlo noise while preserving visible edges.
+            byte[] clean=(byte[])pixels.Clone();
+            Parallel.For(2,height-2,y=>{for(int x=2;x<width-2;x++){
+                int i=stride*y+x*3;double b=0,g=0,r=0,weight=0;
+                for(int v=-2;v<=2;v++)for(int u=-2;u<=2;u++){
+                    int k=i+v*stride+u*3,db=pixels[k]-pixels[i],dg=pixels[k+1]-pixels[i+1],dr=pixels[k+2]-pixels[i+2];
+                    double w=Math.Exp(-(u*u+v*v)/4.5-(db*db+dg*dg+dr*dr)/1152.0);
+                    b+=w*pixels[k];g+=w*pixels[k+1];r+=w*pixels[k+2];weight+=w;
+                }clean[i]=(byte)(b/weight+.5);clean[i+1]=(byte)(g/weight+.5);clean[i+2]=(byte)(r/weight+.5);
+            }});
             using(var bmp=new Bitmap(width,height,PixelFormat.Format24bppRgb)){
                 var data=bmp.LockBits(new Rectangle(0,0,width,height),ImageLockMode.WriteOnly,PixelFormat.Format24bppRgb);
-                Marshal.Copy(pixels,0,data.Scan0,pixels.Length);bmp.UnlockBits(data);bmp.Save(Path.Combine(dest,s[0]+".jpg"),ImageFormat.Jpeg);
+                Marshal.Copy(clean,0,data.Scan0,clean.Length);bmp.UnlockBits(data);
+                using(var parameters=new EncoderParameters(1)){
+                    parameters.Param[0]=new EncoderParameter(System.Drawing.Imaging.Encoder.Quality,94L);
+                    var encoder=Array.Find(ImageCodecInfo.GetImageEncoders(),c=>c.FormatID==ImageFormat.Jpeg.Guid);
+                    bmp.Save(Path.Combine(dest,s[0]+".jpg"),encoder,parameters);
+                }
             }
             Console.WriteLine(s[0]);
         }

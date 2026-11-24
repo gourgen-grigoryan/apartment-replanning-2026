@@ -1,4 +1,4 @@
-"""Վերահաշվարկել վեց ինժեներական թերթախմբերի ելակետերը R2 մոդելից։"""
+"""Վերահաշվարկել վեց ինժեներական թերթախմբերի ելակետերը R3 մոդելից։"""
 from pathlib import Path
 import json, math, csv
 from collections import defaultdict
@@ -40,13 +40,13 @@ def make_data(arch,spaces,fixtures,location):
         return r
     m=drain('D00','Ընդհանուր հավաքիչ',common,dj,.02,zr,'R')
     # Յուրաքանչյուր ճյուղ՝ մինչև առանձին հասանելի եռաբաշխիչ կամ հավաքիչ։
-    via=(5.45,-1.98)
+
     kpath=[tuple(p) for p in scheme['branch']]
     bpaths=[
         ('D01','Խոհանոցի լվացարան',kpath,.050,.03),
-        ('D02','Զուգարանակոնք',[wc,(6.62,wc[1]),j],.110,.02),
-        ('D03','Ցնցուղ',[sh,(6.31,sh[1]),(6.31,-2.96),j],.050,.03),
-        ('D04','Սանհանգույցի լվացարան',[b,(b[0],-2.82),j],.050,.03),
+        ('D02','Զուգարանակոնք',[wc,(6.81,wc[1]),(7.35,-2.72),j],.110,.02),
+        ('D03','Ցնցուղ',[sh,(6.75,sh[1]),(6.75,-2.94),(7.35,-2.72),j],.050,.03),
+        ('D04','Սանհանգույցի լվացարան',[b,(6.56,b[1]),(7.35,-2.72),j],.050,.03),
     ]
     for id,n,pts,d,i in bpaths:
         r=drain(id,n,pts,d,i,zj,'J')
@@ -66,11 +66,11 @@ def make_data(arch,spaces,fixtures,location):
     for id,pt in [('CO1',j),('CO2',k),('CO3',R)]:
         item(id,'ACCESS',(*pt,.30),(.22,.10,.28),'Մաքրման և ստուգման կետ')
 
-    man=(6.67,-3.13)
+    man=(6.65,-2.62)
     item('MC','CW',(*man,.64),(.40,.13,.35),'Սառը ջրի կոլեկտոր')
     item('MH','HW',(man[0],man[1]+.12,.91),(.40,.13,.22),'Տաք ջրի կոլեկտոր')
     for system,provider,dist in [('CW','WS-C',0),('HW','WS-H',.10)]:
-        source=(6.68+dist,-3.57)
+        source=(6.70+dist,-2.78)
         p=(*source,.70+dist)
         item(provider,system,p,(.09,.09,.24),'Պայմանական մուտքային հանգույց')
         mz=.64 if system=='CW' else .91
@@ -81,7 +81,7 @@ def make_data(arch,spaces,fixtures,location):
         for n,pt,h in consumers:
             z=-.05 if system=='CW' else -.075
             if pt[1]>=0:
-                plan=[man,(6.56+dist,-2.47),via,(5.51+dist,-.70),(5.51+dist,pt[1]),pt]
+                plan=[man,(6.65+dist,man[1]),(6.65+dist,-2.35),(6.65+dist,-.90),(6.65+dist,pt[1]),pt]
             else:plan=[man,(6.49+dist,man[1]),(6.49+dist,pt[1]),pt]
             route(system+'-'+n,system,[manifold,*at_z(plan,z),(*pt,h)],.016,'Ջրաբաժան կետ '+n)
 
@@ -90,7 +90,7 @@ def make_data(arch,spaces,fixtures,location):
         ('Q1','Լուսավորում, բնակելի գոտի',.20,1.0,10,1.5),
         ('Q2','Լուսավորում, օժանդակ գոտի',.16,1.,10,1.5),
         ('Q3','Ստուդիայի և ճաշասենյակի վարդակներ',2.00,.50,16,2.5),
-        ('Q4','Ննջասենյակների վարդակներ',2.00,.40,16,2.5),
+        ('Q4','Ննջասենյակի և ներքին սենյակի վարդակներ',2.00,.40,16,2.5),
         ('Q5','Խոհանոցի սեղանի վարդակներ',2.50,.70,16,2.5),
         ('Q6','Ինդուկցիոն սալօջախ',7.20,.60,32,6),
         ('Q7','Ջեռոց',3.00,.70,16,2.5),
@@ -98,7 +98,7 @@ def make_data(arch,spaces,fixtures,location):
         ('Q9','Լվացքի մեքենա',2.20,.60,16,2.5),
         ('Q10','Սառնարան և օդաքաշ',.40,1.,10,2.5),
         ('Q11','Ջերմային պոմպի արտաքին բլոկ',2.20,.90,16,2.5),
-        ('Q12','Օդափոխություն և սրբիչաչորացուցիչ',.65,.90,10,1.5),
+        ('Q12','Օդափոխություն և սրբիչաչորացուցիչ',.72,.90,10,1.5),
         ('Q13','Ճաշասրահի լրացուցիչ վարդակներ',1.50,.40,16,2.5),
     ]
     for id,n,kw,fusek,cb,s in consumer_rows:
@@ -107,24 +107,20 @@ def make_data(arch,spaces,fixtures,location):
     item('DB','POWER',(*panel,1.45),(.12,.38,.55),'Բնակարանային վահանակ՝ արևելյան պատին')
     for n,key,pt,h,cid in location['sockets']:
         item(n,'POWER',(*pt,h),(.08,.055,.08),key,circuit=cid)
-        # Կարճ պայմանական ուղիներ՝ բացվածքների միջով, առաստաղի վրայով և ուղղաձիգ իջեցումներով։
-        if pt[1]<-.6 and pt[0]<6.9:
-            path=[panel,(6.74,-1.26),(5.10,-1.26)]
-            if pt[0]<3.28:path +=[(3.36,-1.82),(3.15,-1.82)]
-        elif pt[1]>0:
-            path=[panel,(5.18,-1.15),(5.18,.18)]
-            if pt[0]<3: path +=[(2.60,.62)]
-        else:path=[panel]
         z=2.55
-        if pt[1]>0:
-            neck=[(*panel,1.45),(*panel,z),(5.18,-1.15,z),(5.18,-.77,z),(5.18,-.77,-.040),(5.18,.18,-.040),(5.18,.18,z)]
-            xyz=neck+at_z(path[3:],z)
-        else:xyz=[(*panel,1.45),*at_z(path,z)]
-        if n=='E4':
-            xyz += [(5.72,.18,z),(5.72,1.19,z),(5.72,1.19,-.040),(6.67,1.19,-.040),(6.67,1.19,z),(6.97,1.19,z),(6.97,pt[1],z)]
+        # Դեպի վերին գոտի բոլոր գծերն անցնում են կրող պատի արևելյան ծայրից այն կողմ։
+        path=[panel]
+        if n in ('E1','E2','E3','E5','E6','E7','E8','E10','E11','E13','E14'):
+            path += [(6.65,panel[1]),(6.65,.25)]
         if n=='E11':
-            xyz += [(4.32,.18,z),(4.32,4.40,z),(4.32,4.40,1.99),(4.32,4.65,1.99),(4.32,4.65,z),(4.32,8.13,z)]
-        route('EL-'+n,'CABLE',[*xyz,(pt[0],xyz[-1][1],z),(*pt,z),(*pt,h)],.016,key,circuit=cid)
+            path += [(6.65,4.10),(6.65,7.94),(pt[0],7.94)]
+        elif n=='E14':
+            path += [(6.65,2.70),(5.22,2.70),(5.22,pt[1])]
+        elif n in ('E1','E3','E13'):
+            path += [(3.15,.25),(3.15,pt[1])]
+        else:
+            path += [(pt[0],path[-1][1])]
+        route('EL-'+n,'CABLE',[(*panel,1.45),*at_z(path,z),(*pt,z),(*pt,h)],.016,key,circuit=cid)
 
     for rid,v in location['lightzones'].items():
         pts,names,area_val,target,each,g,role=v
@@ -147,41 +143,68 @@ def make_data(arch,spaces,fixtures,location):
     return zr,zj,common
 
 def make_hvac(arch,loc,fixtures):
-    out=(8.23,8.57,1.05)
-    item('HP-OD','HVAC',out,(.85,.38,.73),'Արտաքին բլոկ, տեղը՝ համաձայնեցման ենթակա')
-    for code,p in loc['indoor'].items():
-        item('IU-'+code,'HVAC',(*p,2.29),(.72,.23,.30),'Երկռեժիմ ներքին բլոկ')
-        plan=[p,(p[0],4.58),(p[0],7.95),(8.24,7.95),out[:2]]
-        route('RF-'+code,'REF',[(*p,2.29),*at_z(plan,2.48),out],.045,'Մեկուսացված սառնագենտի զույգ')
-    # Կոնդենսատը հասնում է խոհանոցի բաց ձագարին՝ սիֆոնով ու օդային խզումով։
-    k=fixtures['K'];f=(k[0],k[1],.67)
+    out=(8.19,8.49,1.05)
+    item('HP-OD','HVAC',out,(.78,.34,.70),'Արտաքին բլոկ · բաց օդ, հաստատել հենարանը')
+    k=fixtures['K'];f=(*k,.67)
     item('CD-F','COND',f,(.09,.09,.12),'Սիֆոնավոր ձագար, օդային խզում')
     for code,p in loc['indoor'].items():
-        if code=='S':plan=[p,(p[0],3.72),(5.22,3.72),(5.22,k[1]),k]
-        else:
-            facade_x={'B1':.55,'B2':7.05}[code]
-            plan=[p,(facade_x,p[1]),(facade_x,4.80),(3.76,4.80),(3.76,3.72),(5.22,3.72),(5.22,k[1]),k]
-        l=0; pts=[]
+        size=(.22,.70,.30) if code in ('B1','B2') else (.72,.23,.30)
+        item('IU-'+code,'HVAC',(*p,2.29),size,'Երկռեժիմ ներքին բլոկ')
+        if code=='B2':
+            head=[p,(3.56,p[1]),(3.56,-1.04),(6.58,-1.04),(6.58,.34)]
+        elif code=='B1':
+            head=[p,(2.73,p[1]),(2.73,3.70)]
+        else:head=[p,(p[0],3.70)]
+        end=head[-1];rf=head+[(end[0],4.53),(end[0],7.92),(out[0],7.92),out[:2]]
+        route('RF-'+code,'REF',[(*p,2.29),*at_z(rf,2.48),out],.045,'Մեկուսացված սառնագենտի զույգ')
+        plan=head+[(end[0],k[1]),k];length=0;pts=[]
         for i,v in enumerate(plan):
-            if i:l+=math.dist(v,plan[i-1])
-            pts.append((*v,2.15-.012*l))
+            if i:length+=math.dist(v,plan[i-1])
+            pts.append((*v,2.15-.012*length))
         route('CD-'+code,'COND',[*pts,f],.025,'Կոնդենսատ, i=1.2%, վերջում ուղղաձիգ իջեցում')
+    # Միակ դրսի օդամուտք, օդամշակման բլոկ և բաշխիչ հանգույց՝ ընդհանուր բեռնվածքով։
+    z=2.52; intake=(5.22,8.22);ahu=(5.22,6.90);plenum=(5.22,3.70)
+    item('OA','SUP',(*intake,z),(.26,.10,.18),'Արտաքին եզրի օդամուտք',flow=110)
+    item('AHU','SUP',(*ahu,z),(.53,.70,.33),'Մշտագործ ներհոսքի EC օդափոխիչ, ֆիլտր և խլացուցիչ',flow=110,circuit='Q12')
+    item('PL','SUP',(*plenum,z),(.26,.26,.18),'Բաշխիչ հանգույց',flow=110)
+    route('OA-AHU','SUP',at_z([intake,ahu],z),.16,'Դրսի օդ՝ մինչև օդամշակման բլոկ',flow=110)
+    route('AHU-PL','SUP',at_z([ahu,plenum],z),.16,'Մեկուսացված բաշխիչ մայրուղի',flow=110)
     for code,p,val in loc['supply']:
-        path=[(p[0],8.22),(p[0],4.53),p]
-        if p[1]<0: path=[(4.94,8.22),(4.94,4.53),(5.10,.25),(5.10,-1.10),(5.10,-1.83)]
-        if p[1]<0 and p[0]<3.3:path +=[(3.34,-1.83)]
-        if tuple(path[-1]) != tuple(p): path.append(p)
-        diameter=.125 if val>=25 else .08
-        route('SA-'+code,'SUP',at_z(path,2.52),diameter,'Դրսի օդի ներհոսք',flow=val)
-        item('SD-'+code,'SUP',(*p,2.52),(.18,.18,.10),'Կարգավորվող ներհոսքի վանդակ',flow=val)
+        if code=='B2':
+            plan=[plenum,(6.65,3.70),(6.65,-1.10),(3.0,-1.10),(3.0,p[1]),p]
+        else:plan=[plenum,(p[0],plenum[1]),p]
+        route('SA-'+code,'SUP',at_z(plan,z),.125,'Դրսի օդի ներհոսք',flow=val)
+        item('SD-'+code,'SUP',(*p,z),(.18,.18,.10),'Կարգավորվող ներհոսքի վանդակ',flow=val)
     for code,p,val,e in loc['exhaust']:
-        path=[p,(p[0],e[1]),e]
-        route('EA-'+code,'EXH',at_z(path,2.48),.125,'Առանձին արտածման ճյուղ',flow=val)
-        item('EX-'+code,'EXH',(*p,2.48),(.17,.17,.10),'Արտածման վանդակ',flow=val)
-        item('SV-'+code,'EXH',(*e,2.48),(.18,.18,.18),'Ստուգման կետ՝ մինչև գործող հորան',flow=val)
-    for code,pts,val in [('H1',[(5.64,-1.43),(5.96,-1.43)],50),('BA',[(6.35,-2.15),(6.35,-2.40)],50)]:
-        route('TF-'+code,'TRANSFER',at_z(pts,1.90),.10,'Ներքին օդափոխման փոխանցում',flow=val)
-    item('TR-B','HEAT',(6.68,-3.05,1.12),(.10,.48,.65),'Էլեկտրական սրբիչաչորացուցիչ, 0.4 կՎտ')
+        mid=(p[0],(p[1]+e[1])/2)
+        route('EA-'+code,'EXH',at_z([p,mid,(p[0],e[1]),e],2.43),.125,'Մշտագործ արտածում դեպի հաստատվող հորան',flow=val)
+        item('EX-'+code,'EXH',(*p,2.43),(.17,.17,.10),'Արտածման վանդակ',flow=val)
+        item('EF-'+code,'EXH',(*mid,2.43),(.20,.20,.20),'Արտածող EC օդափոխիչ՝ թույլատրելի միացումով',flow=val,circuit='Q12')
+        item('SV-'+code,'EXH',(*e,2.43),(.18,.18,.18),'Ստուգման կետ՝ մինչև գործող հորան',flow=val)
+    for code,pts,val in loc['transfers']:
+        # Չափավորումը՝ երկու քնողի հոսքի և իրական ազատ հատույթի համար։
+        boosted={'B1-ST':35,'B2-H1':60,'ST-H1':10,'H1-BA':70}[code]
+        diameter={'B1-ST':.16,'B2-H1':.20,'ST-H1':.10,'H1-BA':.20}[code]
+        route('TF-'+code,'TRANSFER',at_z(pts,1.90),diameter,'Փակ դռներով փոխանցում · ակուստիկ անցուղի',flow=val,boost_flow=boosted,free_area_cm2=math.ceil(max(val,boosted)/3600*10000))
+    boost={'OA':135,'OA-AHU':135,'AHU':135,'AHU-PL':135,'PL':135,
+        'SA-B1':35,'SD-B1':35,'SA-B2':60,'SD-B2':60,'SA-ST':40,'SD-ST':40}
+    for code,flow in [('K',65),('BA',70)]:
+        for prefix in ('EA','EX','EF','SV'):boost[prefix+'-'+code]=flow
+    for obj in [*elements,*routes]:
+        if obj['id'] in boost:obj['boost_flow']=boost[obj['id']]
+
+    item('TR-B','HEAT',(6.75,-2.90,1.12),(.10,.40,.65),'Էլեկտրական սրբիչաչորացուցիչ, 0.4 կՎտ',circuit='Q12')
+
+    # Վերջնական ֆիքսված սպառիչները՝ հստակ նշված անջատիչից կամ վահանակից։
+    by_id={e['id']:e['point'] for e in elements}
+    hood=(8.54,fixtures['K'][1]-1.08,1.96)
+    item('HD','POWER',hood,(.08,.055,.08),'Շրջանառու օդաքաշի ելք',circuit='Q10')
+    wm=(*fixtures['WM'],.67)
+    item('WM-P','POWER',wm,(.08,.055,.08),'Լվացքի մեքենայի ֆիքսված ելք',circuit='Q9')
+    for prefix,end,point,wire in [('E9','WM-P',wm,'Q9'),('E10','HD',hood,'Q10'),('E11','HP-OD',out,'Q11'),('E12','TR-B',by_id['TR-B'],'Q12'),('E14','AHU',by_id['AHU'],'Q12'),('E12','EF-BA',by_id['EF-BA'],'Q12'),('E14','EF-K',by_id['EF-K'],'Q12')]:
+        start=by_id[prefix]
+        plan=[start[:2],(start[0],point[1]),point[:2]]
+        route('EL-'+prefix+'-'+end,'CABLE',[start,*at_z(plan,2.55),point],.016,'Ֆիքսված սարքի սնուցում',circuit=wire)
 
 def inside(p,poly):
     x,y=p;result=False
@@ -233,40 +256,64 @@ def export_dxf(arch):
         pair(0,'ENDSEC');pair(0,'EOF')
         (DIR/(file+'.dxf')).write_text('\n'.join(entries)+'\n',encoding='ascii')
 
-ROOMS={'S':'Ստուդիա · հյուրասենյակ','B1':'Ննջասենյակ 1','B2':'Ննջասենյակ 2','BA':'Համատեղ սանհանգույց','HL':'Ներքին մուտքային միջանցք','H2':'Ննջասենյակի անցում','KT':'Ստուդիա · խոհանոց և ճաշասրահ','BL':'Վիտրաժային պատշգամբ','SC':'Խորդանոց'}
-def operating_points(areas,fl):
-    loc=dict(panel=(6.85,-1.98));k=fl['K']
+ROOMS={'ST':'Բաց ստուդիա','B1':'Լուսավոր ննջասենյակ','B2':'Ներքին օժանդակ սենյակ','BA':'Սանհանգույց','H1':'Ներքին միջանցք','BAL':'Պատշգամբ','SR':'Խորդանոց'}
+
+def operating_points(areas,fl,furn,openings):
+    def center(key):
+        f=furn[key]
+        return (f['x']+f['w']/2,f['y']+f['d']/2)
+    def east(key):
+        f=furn[key]
+        return (f['x']+f['w']-.04,f['y']+f['d']/2)
+    def near_wall(zone,key):
+        f=furn[key];poly=areas[zone]
+        return (min(x for x,y in poly)+.12,min(max(y for x,y in poly)-.16,f['y']+f['d']-.12))
+    def cross(door,start,end,along='y'):
+        o=openings[door];x=(o['a'][0]+o['b'][0])/2;y=(o['a'][1]+o['b'][1])/2
+        return [(x+v,y) if along=='x' else (x,y+v) for v in (start,end)]
+    hall_to_bath=cross('D-BA',.14,-.14)
+    b1door=next(o['id'] for o in openings.values() if o['id']=='D-B1')
+    b2door=next(o['id'] for o in openings.values() if o['wall']=='S3' and o['kind']=='door')
+    hall_to_b2=cross(b2door,.16,-.16,'x')
+    loc=dict(panel=(6.79,-1.99))
+    sofa=furn['SO1'];so=(sofa['x']+.12,sofa['y']+.10)
+    b1=near_wall('B1','BED1');b2=near_wall('B2','BED2')
+    table=center('TB1');fr=east('FR');hob=east('HB');dw=east('DW')
     loc['sockets']=[
-        ('E1','Բազմոցի վարդակներ',(3.21,2.04),.30,'Q3'),('E2','Ճաշասեղանի սպասարկում',(.37,-3.45),.30,'Q3'),
-        ('E3','Մահճակալ 1',(.19,3.77),.58,'Q4'),('E4','Մահճակալ 2',(8.74,3.89),.58,'Q4'),
-        ('E5','Խոհանոցային աշխատանքային սեղան',(4.92,-2.85),1.12,'Q5'),('E6','Սալօջախի սեղմակ',(4.93,-4.22),.48,'Q6'),
-        ('E7','Ջեռոց՝ կողային միացում',(4.93,-3.96),.48,'Q7'),('E8','Սպասք լվացողի կողային միացում',(4.95,-3.12),.48,'Q8'),
-        ('E9','Լվացքի մեքենա․ հասանելի անջատիչ՝ չոր կողմից',(4.98,-4.68),.95,'Q9'),('E10','Սառնարան և օդաքաշ',(4.94,-4.83),1.95,'Q10'),
-        ('E11','Արտաքին բլոկի անջատիչ',(8.23,8.20),1.25,'Q11'),('E12','Չոր գոտու անջատիչ',(6.68,-2.17),1.0,'Q12'),
-        ('E13','Ճաշասրահի լրացուցիչ վարդակ',(3.63,-5.09),.30,'Q13')]
-    loc['supply']=[('B1',(1.44,3.90),35),('B2',(7.97,3.91),35),('S',(4.46,3.94),40)]
-    loc['exhaust']=[('K',(4.73,-4.23),60,(5.0,-3.90)),('B',(6.31,-4.44),50,(6.45,-2.82))]
-    loc['airtable']=[['Ննջասենյակ 1','35','—','35 դեպի հյուրասենյակ'],['Ննջասենյակ 2','35','—','35՝ ներքին անցքով դեպի հյուրասենյակ'],['Հյուրասենյակ','40','—','ընդհանուր 110 դեպի խոհանոց-ճաշասրահ'],['Խոհանոց և ճաշասրահ','—','60','50 դեպի մուտքային միջանցք'],['Մուտքային միջանցք','—','—','50 դեպի սանհանգույց'],['Սանհանգույց','—','50','50 միջանցքից'],['Բնակարան, գումար','110','110','նախնական հաշվեկշիռ'],['Պատշգամբ / խորդանոց','—','—','բացվող փեղկեր / պասիվ օդանցք']]
-    loc['indoor']={'B1':(.43,4.27),'B2':(7.14,4.27),'S':(3.50,4.29)}
-    loc['switches']=[('T1','G1/G7/G8',(4.42,.12)),('T2','G2',(2.97,1.32)),('T3','G3',(7.40,1.73)),('T4','G4/G9',(6.46,-2.13)),('T5','G5/G6',(6.70,-.69)),('T7','G11',(3.88,4.26)),('T8','G12',(9.88,-1.91)),('T9','G13',(6.62,.76))]
-    loc['extra_lights']=[('L-K1',(4.8,-3.16),1.52,(.035,.88,.035),590,'Աշխատանքային LED 1','G7'),('L-K2',(4.8,-4.08),1.52,(.035,.92,.035),610,'Աշխատանքային LED 2','G7'),('L-T',(1.71,-3.025),1.83,(.35,.35,.15),900,'Ճաշասեղանի լուսատու','G8'),('L-M',fl['B'],1.72,(.36,.05,.08),650,'Հայելու լուսատու','G9')]
-    zone_specs=[('S','S','G1',150,1350),('B1','B1','G2',150,1100),('B2','B2','G3',150,1100),('BA','BA','G4',100,800),('HL','HL','G5',100,800),('H2','H2','G13',100,800),('KT','KT','G6',150,1350),('BL','BL','G11',55,1000),('SC','SC','G12',80,250)]
+        ('E1','Բազմոց',so,.30,'Q3'),('E2','Ճաշասեղանի գոտի',(8.75,3.20),.30,'Q3'),
+        ('E3','Ննջասենյակի մահճակալ',b1,.58,'Q4'),('E4','Ներքին սենյակի մահճակալ',b2,.58,'Q4'),
+        ('E5','Խոհանոցի սեղան',(8.72,min(2.32,hob[1]+.36)),1.12,'Q5'),('E6','Սալօջախ',hob,.48,'Q6'),
+        ('E7','Ջեռոցի կողային ելք',(hob[0],hob[1]+.12),.48,'Q7'),('E8','Սպասք լվացողի ելք',(dw[0],dw[1]-.12),.48,'Q8'),
+        ('E9','Լվացքի մեքենայի անջատիչ',(hall_to_bath[0][0]-.55,-2.12),1.05,'Q9'),('E10','Սառնարան',fr,1.95,'Q10'),
+        ('E11','Արտաքին բլոկի անջատիչ',(8.18,8.09),1.25,'Q11'),('E12','Սրբիչաչորացուցիչի անջատիչ',(6.62,-2.13),1.0,'Q12'),
+        ('E13','Ստուդիայի լրացուցիչ վարդակ',(4.89,.16),.30,'Q13'),('E14','Օդամշակման բլոկի անջատիչ',(5.22,6.64),1.48,'Q12')]
+    loc['supply']=[('B1',(1.32,3.53),35),('B2',(.72,-4.16),35),('ST',(6.91,3.45),40)]
+    loc['exhaust']=[('K',(8.10,1.46),60,(8.58,.16)),('BA',(5.83,-4.35),50,(6.63,-2.57))]
+    loc['transfers']=[('B1-ST',cross(b1door,-.15,.15,'x'),35),('B2-H1',list(reversed(hall_to_b2)),35),('ST-H1',cross('D-LB',.38,-.41),15),('H1-BA',hall_to_bath,50)]
+    loc['airflow_scenarios']={'one_person_B2':{'supply_m3h':{'B1':35,'B2':35,'ST':40},'exhaust_m3h':{'K':60,'BA':50}},'two_people_B2':{'supply_m3h':{'B1':35,'B2':60,'ST':40},'exhaust_m3h':{'K':65,'BA':70}}}
+    loc['airtable']=[['Լուսավոր ննջասենյակ','35','—','35 դեպի ստուդիա'],['Ներքին օժանդակ սենյակ','35','—','35 դեպի միջանցք'],['Բաց ստուդիա','40','60','35 ներս՝ B1-ից, 15 դեպի H1'],['Միջանցք','—','—','35 + 15 դեպի սանհանգույց'],['Սանհանգույց','—','50','50 միջանցքից'],['Ընդամենը','110','110','շուրջօրյա նախագծային ռեժիմ']]
+    loc['indoor']={'B1':(max(v[0] for v in areas['B1'])-.14,3.70),'B2':(3.08,-3.22),'ST':(6.06,4.17)}
+    loc['switches']=[('T1','G1/G7/G8',(4.29,.14)),('T2','G2',(2.35,1.60)),('T3','G3',(3.10,-1.03)),('T4','G4/G9',(hall_to_bath[0][0]+.53,-2.13)),('T5','G5',(6.69,-1.81)),('T7','G11',(3.86,4.27)),('T8','G12',(9.91,-1.95))]
+    loc['extra_lights']=[('L-K1',(8.55,.62),1.52,(.035,.86,.035),590,'Աշխատանքային LED 1','G7'),('L-K2',(8.55,1.52),1.52,(.035,.90,.035),610,'Աշխատանքային LED 2','G7'),('L-T',table,1.83,(.35,.35,.15),900,'Ճաշասեղանի լուսատու','G8'),('L-M',fl['B'],1.72,(.36,.05,.08),650,'Հայելու լուսատու','G9')]
     loc['lightzones']={}
-    dummy=[((p[0],8.22),p) for tag,p,v in loc['supply'] if p[1]>0]+[(p,end) for tag,p,v,end in loc['exhaust']]
-    for id,r,g,t,each in zone_specs:
-        if r not in areas:continue
-        p=areas[r];av=area(p);count=math.ceil(t*av/(each*.6*.8))
-        loc['lightzones'][id]=(layout_lights(p,count,dummy),ROOMS[r],av,t,each,g,'ընդհանուր')
+    dummy=[((p[0],3.70),p) for tag,p,v in loc['supply']]+[(p,end) for tag,p,v,end in loc['exhaust']]
+    for rid,g,t,each in [('ST','G1',150,1350),('B1','G2',150,1100),('B2','G3',150,1100),('BA','G4',100,800),('H1','G5',100,800),('BAL','G11',55,1000),('SR','G12',80,250)]:
+        p=areas[rid];av=area(p);count=math.ceil(t*av/(each*.6*.8))
+        loc['lightzones'][rid]=(layout_lights(p,count,dummy),ROOMS[rid],av,t,each,g,'ընդհանուր')
     return loc
 
-def thermal_balance():
-    # Ag և Ao՝ պայմանական ուղղաձիգ ապակու և անթափանց պատի մակերես, մ²։
+def thermal_balance(raw,areas):
+    heights=raw['height']
+    room_width=max(x for x,y in areas['B1']);front_end=max(x for x,y in areas['ST'] if y>4.3)
+    glazed={'B1':0.,'ST':0.}
+    for opening in raw['openings']:
+        if opening['kind'] not in ('window','glazed_door') or opening['wall'] not in ('F1','F2'):continue
+        x=.5*(opening['a'][0]+opening['b'][0]);rid='B1' if x<room_width else 'ST'
+        glazed[rid]+=math.dist(opening['a'],opening['b'])*opening['height']
     rows=[]
-    for name,ag,ao,q,inner in [
-        ('Ստուդիա · հյուրասենյակ',4.5244,2.35535*2.8-4.5244,40,180),('Ննջասենյակ 1',2.0272,3.0656*2.8-2.0272,35,150),('Ննջասենյակ 2',1.7515,3.055*2.8-1.7515,35,150),
-        ('Ստուդիա · խոհանոց և ճաշասրահ',0,0,0,900),('Ներքին միջանցքներ',0,0,0,30),('Սանհանգույց',0,0,0,80)]:
-        conduct=ag*1.5+ao*.7+q*.34
-        rows.append(dict(name=name,ag=ag,ao=ao,q=q,internal_W=inner,heat=conduct*36,cool=conduct*12+ag*420*.52*.65+inner))
+    for rid,q,inner,width in [('ST',40,1050,front_end-room_width-.10),('B1',35,150,room_width),('B2',35,150,0),('H1',0,30,0),('BA',0,80,0)]:
+        ag=glazed.get(rid,0);ao=max(0,width*heights-ag);conduct=ag*1.5+ao*.7+q*.34
+        rows.append(dict(id=rid,name=ROOMS[rid],ag=ag,ao=ao,q=q,internal_W=inner,heat=conduct*36,cool=conduct*12+ag*420*.52*.65+inner))
     return rows
 
 def make_register(zr,common):
@@ -276,15 +323,19 @@ def make_register(zr,common):
     # Ուղղահայաց բացակը համեմատվում է բոլոր սովորական առաստաղային լուսատուների ցածր եզրի հետ։
     minlight=min(e['point'][2]-e['size'][2]/2 for e in flat); dz=minlight-ducttop
     main=line('D00');length=main['length_plan']
-    beam=[p for p in line('D01')['points'] if -.60<=p[1]<=.60]
+
     checks=[
        ['C01','D00 և նախամուտքի սալ',f'R-ի սցենարային նիշը {zr:+.3f} մ է։ Հիմնական ճյուղը Ø110 մմ է, L={length:.2f} մ։','Լազերային համատեղ չափում J, R և հատման տեղերում։ Հաստատել վերին պաշտպանիչ շերտն ու ստորին բարձիկը։','Կոնստրուկտոր և ջրահեռացման ինժեներ','Բաց. սալի մակերևույթի չափ չկա։'],
        ['C02','Ներհոսքի խողովակ / առաստաղ',f'Ընդունված վերին եզրը՝ +{ducttop:.3f} մ, սենյակի առաստաղը՝ +2.800 մ։',f'Մնում է {1000*(2.80-ducttop):.0f} մմ։ Չափել հեծանները, վերնամասերը և կցամասերը։','HVAC նախագծող','Սցենարը տեղավորվում է։ Կառույցները չչափագրված են։'],
        ['C03','Օդատար / առաստաղի լուսատու',f'Լուսատուների ստորին եզր՝ +{minlight:.3f} մ։ Օդատարի վերին եզր՝ +{ducttop:.3f} մ։',f'Հարթ տեղամասի նիշերի բացակը {dz*1000:.0f} մմ է։ LED սնուցման բլոկի և տեղային կախիչի ծավալը ստուգել առանձին։','Լուսատեխնիկ և HVAC նախագծող','Ուղղաձիգ բացակը ստուգված է պայմանական նիշերով։'],
-       ['C04','D01 և թաց գոտու միջնորմ','Խոհանոցի ճյուղը ստորին գոտում անցնում է ST2-ից BA-ի կից նոր պատով։','Ստուգել անցքի թևքը, ջրամեկուսացումը և հատակի շերտերի բավարարությունը։','Ջրահեռացման ինժեներ','R2-ում 5.92 մ պատը D01-ը չի հատում։'],
+       ['C04','Խոհանոցի ինքնահոս ճյուղ',f"D01-ի երկարությունը մինչև J {line('D01')['length_plan']:.2f} մ է։ Նոր խոհանոցը ստուդիայի արևելյան պատին է։",'Ստուգել սալը, խողովակատակը և հասանելի ծառայողական փակոցը։ Կրող պատը նախապես չծակել։','Ջրահեռացման ինժեներ','Բաց՝ իրական շերտերը և միացման նիշը։'],
        ['C05','Մուտք №3 / վահանակ և կահույք','Վահանակը նախատեսվում է չոր նախասրահում՝ մուտքի մոտ։','Ստուգել դռան ամբողջ բացման աղեղը, վահանակի կափարիչը, կահույքն ու սպասարկողի կանգնելու տեղը՝ տեղադրման շաբլոնով։','Ճարտարապետ և էլեկտրանախագծող','Դռան իրական ծխնին և պատի հաստությունը բաց են։'],
        ['C06','Արտաքին բլոկ / պատշգամբ','Արտաքին բլոկը՝ օդափոխվող արտաքին կողմում, ցուրտ ժամանակ հալոցքի ջրով։','Ճշտել ճակատին տեղադրման թույլտվությունը, ամրացման հիմքը, օդի ետշրջումը, շահագործման մուտքը և ստորև մարդկանց պաշտպանությունը։','Կոնստրուկտոր և HVAC նախագծող','Արտաքին հենարանը և դիրքը բաց են։'],
     ]
+    checks.extend([
+        ['C07','B2 ներհոսք և վերադարձ','Մշտագործ 35 մ³/ժ ներքին սենյակին։ Փոխանցում դեպի H1՝ փակ դռնով։','Հավասարակշռել վանդակներով, ստուգել ձայնը գիշերը և չափել հոսքը փակ դռներով։','Օդափոխության մասնագետ','Հաստատվող չափագրում և շահագործման փորձարկում։'],
+        ['C08','Ստուդիա / միջանցք · օդուղիներ','SA-B2-ը կրող պատի արևելյան եզրը շրջանցում է x=6.65 մ-ով։','Չափագրել առկա միջնապատի և ճակատի անցանելի հանգույցները, ստանալ թույլտվություն։','Կոնստրուկտոր և HVAC նախագծող','Պայմանական միջանցք՝ առանց կրող պատի նոր անցքի։'],
+    ])
     specs=[]
     for sys,name,typ in [('CW','Սառը ջուր','բազմաշերտ PE-X'),('HW','Տաք ջուր','մեկուսացված PE-X'),('DWV','Կոյուղի','ձայնամեկուսացված PP'),('SUP','Ներհոսք','մեկուսացված օդատար'),('EXH','Արտածում','կոշտ օդատար'),('REF','Սառնագենտ','պղնձե զույգ'),('COND','Կոնդենսատ','սպասարկվող խողովակ')]:
         by=defaultdict(float)
@@ -295,6 +346,7 @@ def make_register(zr,common):
             specs.append([name,typ+' · '+kind,f'{l:.1f} մ','Մոդելի կենտրոնագծերը, առանց հավելավճարի և պաշարի։','Ճշտել ընտրած արտադրանքի հետ, ավելացնել կցամասեր և պահուստ։'])
     for cat,name,qty,condition in [('Էլեկտրական','Բնակարանային վահանակ + RCBO','1 + 13','Տարբերակել տիպը, բևեռները, ջերմային բեռն ու խափանման հոսանքը։'),('Լուսավորում','Ընդհանուր և տեղային LED',f"{sum(e['system']=='LIGHT' for e in elements)} հատ",'Սպեկտր, IP և լուսաչափական ֆայլ։'),('HVAC','Արտաքին / ներքին բլոկ','1 / 3','Վերահաշվել փաստացի ձմեռային հզորությունը և սառնագենտի ծավալը։'),('Ջրամատակարարում','Կոլեկտորներ և հասանելի փականներ','2 հավաքածու','6 սառը, 3 տաք ելք, փակող փական յուրաքանչյուր ճյուղում։')]:
         specs.append([cat,name,qty,'Ըստ տարրերի և վերջնակետերի ցանկի։',condition])
+    specs.append(['Օդափոխություն','1 օդամշակման բլոկ + 2 արտածող օդափոխիչ','1 + 2','Ներհոսք 110/135, արտածում 60+50 / 65+70 մ³/ժ։','Ընտրել ըստ դիմադրության, աղմուկի և հասանելի սպասարկման։'])
     return checks,specs
 
 def main():
@@ -308,18 +360,41 @@ def main():
     DIR=args.output.resolve();DIR.mkdir(parents=True,exist_ok=True)
     arch=dict(spaces=[dict(id=r['id'],name=r['name'],poly=r['points']) for r in raw['rooms']],walls=raw.get('walls',[]),openings=raw.get('openings',[]),furniture=raw.get('furniture',[]))
     arch['sewer']=raw['sewer']
-    codes={'S':'ST','KT':'ST2','B1':'B1','B2':'B2','BA':'BA','HL':'H1','H2':'H2','BL':'BAL','SC':'SR'}
-    areas={k:next(v['points'] for v in raw['rooms'] if v['id']==rid) for k,rid in codes.items()}
+    assert raw['revision']=='R3' and raw['selected']==3
+    areas={v['id']:v['points'] for v in raw['rooms']}
+    assert set(areas)=={'B1','B2','ST','H1','BA','SH','SR','BAL'}
+    furn={v['id']:v for v in raw['furniture']};openings={v['id']:v for v in raw['openings']}
     ids={'WC':'WC','SH':'SHW','B':'BS','K':'KS','DW':'DW','WM':'WM'}
     def center(id):
         v=next(t for t in raw['furniture'] if t['id']==id);return (v['x']+v['w']/2,v['y']+v['d']/2)
     fl={k:center(id) for k,id in ids.items()}
-    loc=operating_points(areas,fl)
+    loc=operating_points(areas,fl,furn,openings)
     zr,zj,common=make_data(arch,areas,fl,loc)
     make_hvac(arch,loc,fl)
     checks,specs=make_register(zr,common)
-    thermal=thermal_balance()
-    d=dict(status='Նախնական նախագծային R2, տեղում չչափագրված, հաստատման ենթակա',units='m',origin=BASE['origin'],fixtures=fl,routes=routes,elements=elements,drains=drains,loads=demand,lighting=lights,thermal=thermal,clashes=checks,specs=specs,loc=loc,zr=zr,zj=zj,common=common)
+    thermal=thermal_balance(raw,areas)
+    # Գծագրերի ստեղծումից առաջ ստուգել ելակետերը և ճյուղերի հաշվեկշիռը։
+    route_map={v['id']:v for v in routes};elem_map={v['id']:v for v in elements}
+    assert len(route_map)==len(routes) and len(elem_map)==len(elements)
+    assert not set(elem_map).intersection(route_map)
+    assert set(v['id'] for v in lights)=={'ST','B1','B2','BA','H1','BAL','SR'}
+    assert math.dist(common[-1],R)<1e-7 and math.dist(route_map['D01']['points'][0][:2],fl['K'])<1e-7
+    assert abs(drains[0]['total']-raw['sewer']['length'])<1e-7
+    assert abs(drains[0]['h']-raw['sewer']['drop'])<1e-5
+    for k,v in fl.items():assert inside(v,areas['ST' if k in ('K','DW') else 'BA']),k
+    for k,pt in loc['indoor'].items():assert inside(pt,areas[k]),k
+    for key,p,q in loc['supply']:
+        assert inside(p,areas[key]);r=route_map['SA-'+key]
+        assert r['points'][0]==elem_map['PL']['point'] and r['points'][-1]==elem_map['SD-'+key]['point']
+    assert sum(q for _,_,q in loc['supply'])==110==sum(q for _,_,q,_ in loc['exhaust'])
+    for code,points,qty in loc['transfers']:
+        src,dst=code.split('-')
+        assert inside(points[0],areas[src]) and inside(points[-1],areas[dst]),(code,points)
+    for mode in loc['airflow_scenarios'].values():
+        assert sum(mode['supply_m3h'].values())==sum(mode['exhaust_m3h'].values())
+    for code,r in route_map.items():
+        assert len(r['points'])>=2 and summed3(r['points'])>0,code
+    d=dict(revision='R3',entry=3,status='Նախնական նախագծային R3, տեղում չչափագրված, հաստատման ենթակա',units='m',origin=BASE['origin'],fixtures=fl,routes=routes,elements=elements,drains=drains,loads=demand,lighting=lights,thermal=thermal,clashes=checks,specs=specs,loc=loc,zr=zr,zj=zj,common=common)
     save('services.json',d)
     csvfile('drainage.csv',['Գիծ','Սարք','Ճյուղ L, մ','Ընդհանուր L մինչև R, մ','Ինքնահոս անկում, մ','Սկզբի սցենարային նիշ, մ','Ինքնահոս թեքություն','Ընդունիչ'],[[r['id'],r['name'],round(r['len'],4),round(r['total'],4),round(r['h'],5),r['z0'],r['s'],r.get('downstream','J → R')] for r in drains])
     csvfile('coordination.csv',['Տող','Տեղ / տարրեր','Ստուգում','Պայման կամ ուղղում','Պատասխանատու','Կարգավիճակ'],checks)
@@ -327,7 +402,7 @@ def main():
     csvfile('elements.csv',['Նույնացուցիչ','Համակարգ','Նշանակություն','X, մ','Y, մ','Z, մ','Կառավարման խումբ','Շղթա','Հոսք, լմ'],[[e['id'],e['system'],e['name'],*e['point'],e.get('group',''),e.get('circuit',''),e.get('flux_lm','')] for e in elements])
     export_dxf(arch)
     from report import write_report
-    write_report(DIR/'Engineering-R2.pdf',BASE,arch,d)
+    write_report(DIR/'Engineering-R3.pdf',BASE,arch,d)
     print(f'{len(routes)} գիծ, {len(elements)} կետ, {len(lights)} լուսային գոտի, {len(demand)} շղթա')
 
 if __name__=='__main__':main()
