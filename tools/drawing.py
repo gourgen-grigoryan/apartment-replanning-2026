@@ -47,7 +47,7 @@ def pg(code,title,subtitle,scale='սխեմա'):
     line((35,44),(W-35,44),'#B0C3BE',.65)
     txt(35,26,code+'   /   '+scale,10,teal,'bold')
     txt(W/2,26,'Նախնական նախագիծ  •  դաշտային չափագրումն ու մասնագիտական հաստատումը բաց են',9,grey,align='center')
-    txt(W-35,26,'23.11.2026    /    R2',10,ink,align='right')
+    txt(W-35,26,'23.11.2026    /    '+db['revision'],10,ink,align='right')
 def note(x,y,title,body,width=380):
     txt(x,y,title,14,teal,'bold');return wrap(x,y-22,body,width,12,18)-19
 def table(x,y,widths,rows,size=10):
